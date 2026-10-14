@@ -260,6 +260,7 @@ function smsCalendarEvents(DateTimeImmutable $start, DateTimeImmutable $end): ar
         throw new RuntimeException('Calendar events could not be loaded.', 0, $e);
     }
 
+    $events = array_merge($events, smsCalendarAnnouncementEvents($start, $end, $role, $canViewAll));
     usort($events, static fn(array $left, array $right): int => strcmp($left['starts_at'], $right['starts_at']));
     return $events;
 }
@@ -333,4 +334,63 @@ function smsCalendarNormalizeEvent(array $event): array
     $normalized['ends_at'] = $endIso;
 
     return $normalized;
+}
+
+/**
+ * Published announcements as calendar events (P2.6: important announcements on the calendar).
+ * Visibility follows each announcement's audience: "all" announcements are visible to everyone,
+ * and other announcements are visible to the audience role. CRAD officers and calendar managers see every published one.
+ *
+ * @return list<array<string, mixed>>
+ */
+function smsCalendarAnnouncementEvents(DateTimeImmutable $start, DateTimeImmutable $end, string $role, bool $canViewAll): array
+{
+    try {
+        $pdo = db();
+        if (!$pdo instanceof PDO) {
+            return [];
+        }
+        $dateExpr = 'COALESCE(scheduled_for, DATE(published_at), DATE(created_at))';
+        $sql = "SELECT id, title, body, audience, {$dateExpr} AS event_date
+                  FROM `sms2_admin_announcements`
+                 WHERE status = 'published'
+                   AND {$dateExpr} BETWEEN :range_start AND :range_end";
+        $params = [':range_start' => $start->format('Y-m-d'), ':range_end' => $end->format('Y-m-d')];
+        if (!$canViewAll) {
+            $sql .= " AND (audience = 'all' OR audience = :role)";
+            $params[':role'] = $role;
+        }
+        $sql .= ' ORDER BY event_date, id';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $events = [];
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $body = trim((string) preg_replace('/\s+/', ' ', strip_tags((string) ($row['body'] ?? ''))));
+            $events[] = smsCalendarNormalizeEvent([
+                'source_type' => 'announcement',
+                'source_id' => (string) $row['id'],
+                'title' => trim((string) ($row['title'] ?? 'Announcement')),
+                'description' => function_exists('mb_substr') ? mb_substr($body, 0, 180) : substr($body, 0, 180),
+                'event_type' => 'Announcement',
+                'starts_at' => (string) $row['event_date'],
+                'ends_at' => '',
+                'all_day' => true,
+                'timezone' => 'Asia/Manila',
+                'venue' => 'Announcement',
+                'status' => 'Published',
+                'research_group_id' => 0,
+                'process_reference' => 'Announcement ' . (string) $row['id'],
+                'research_group' => '',
+                'audience' => trim((string) ($row['audience'] ?? 'all')),
+                'visibility_scope' => 'announcement',
+                'source_url' => '',
+            ]);
+        }
+        return $events;
+    } catch (Throwable $e) {
+        // An announcement problem must not take down the rest of the calendar.
+        error_log('Calendar announcement events failed: ' . $e->getMessage());
+        return [];
+    }
 }

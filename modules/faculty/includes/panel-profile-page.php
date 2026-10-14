@@ -16,6 +16,7 @@ function panelProfileRequire(): void
 
 function panelProfileAvailability(): array
 {
+    cradEnsurePanelAvailabilityWindows(cradDb());
     $crad = cradDb();
     if (!$crad instanceof PDO) {
         return ['availability_status' => 'Pending', 'notes' => ''];
@@ -32,6 +33,7 @@ function panelProfileAvailability(): array
 
 function panelProfileSaveAvailability(): ?array
 {
+    cradEnsurePanelAvailabilityWindows(cradDb());
     if ($_SERVER['REQUEST_METHOD'] !== 'POST' || ($_POST['panel_action'] ?? '') !== 'update_availability') {
         return null;
     }

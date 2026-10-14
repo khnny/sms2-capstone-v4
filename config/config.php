@@ -17,6 +17,12 @@ if (!defined('APP_VERSION')) {
     define('APP_VERSION', '1.0.0');
 }
 
+// Lifetime of every email / Authenticator verification code (OTP).
+// Recommended by the CRAD/Website To-Do list (P2 Authentication): 5 minutes.
+if (!defined('SMS2_OTP_TTL_MINUTES')) {
+    define('SMS2_OTP_TTL_MINUTES', 5);
+}
+
 if (!defined('ROOT_PATH')) {
     define('ROOT_PATH', dirname(__DIR__));
 }
@@ -552,6 +558,7 @@ $MODULES = [
             'Research Management' => [
                 'research-coordinator-management',
                 'research-defense-scheduling',
+                'panel-applications',
                 'capstone-group-student-registry',
             ],
             'Research Clearance' => [
@@ -598,6 +605,7 @@ $MODULES = [
             ['slug' => 'research-coordinator-management', 'title' => 'Research Coordinator Management'],
             ['slug' => 'capstone-group-student-registry', 'title' => 'Capstone Group/Student Registry'],
             ['slug' => 'research-defense-scheduling', 'title' => 'Research Defense Scheduling'],
+            ['slug' => 'panel-applications', 'title' => 'Panel Applications'],
             ['slug' => 'dashboard-analytics', 'title' => 'Dashboard & Analytics'],
             ['slug' => 'grant-opportunities', 'title' => 'Grant Opportunities'],
             ['slug' => 'proposals-applications', 'title' => 'Proposals & Applications'],

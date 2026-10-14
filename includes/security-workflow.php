@@ -137,7 +137,7 @@ function smsEnsureSecurityTables(): void
 /**
  * Create a 6-digit OTP. Returns plaintext code (show once / email later).
  */
-function smsCreateOtp(int $userId, string $purpose, ?string $moduleKey = null, int $ttlMinutes = 10): ?string
+function smsCreateOtp(int $userId, string $purpose, ?string $moduleKey = null, int $ttlMinutes = SMS2_OTP_TTL_MINUTES): ?string
 {
     $pdo = db();
     if (!$pdo) {
@@ -439,7 +439,7 @@ function smsIssueOtpToEmail(
     int $userId,
     string $purpose,
     ?string $moduleKey = null,
-    int $ttlMinutes = 10,
+    int $ttlMinutes = SMS2_OTP_TTL_MINUTES,
     string $purposeLabel = 'password change'
 ): array {
     require_once __DIR__ . '/mail.php';

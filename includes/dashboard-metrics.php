@@ -14,6 +14,39 @@ declare(strict_types=1);
  *
  * @return array<int, string>
  */
+/**
+ * CRAD application scorecards count from crad_title_approvals, the table that current title
+ * submissions write to (modules/crad/api/send-to-adviser.php). "Approved" uses the official rule
+ * from modules/crad/config/config.php, so the dashboard and the registry agree.
+ */
+function smsDashTitleApprovedWhere(): string
+{
+    if (!function_exists('cradValidTitleApprovalWhereSql')) {
+        require_once ROOT_PATH . '/modules/crad/config/config.php';
+    }
+    return cradValidTitleApprovalWhereSql('crad_title_approvals');
+}
+
+function smsDashTitlePendingWhere(): string
+{
+    return "crad_title_approvals.status NOT IN ('Returned', 'Rejected') AND NOT (" . smsDashTitleApprovedWhere() . ")";
+}
+
+/**
+ * Defense scorecards. A defense is "upcoming" while its date is in the future, and "completed" once the date has passed.
+ * Both need a confirmed status (scheduled or finalized). No code path sets a completed status on the schedule row,
+ * so the earlier status-based count could never be above zero.
+ */
+function smsDashUpcomingDefenseWhere(): string
+{
+    return "defense_datetime IS NOT NULL AND defense_datetime >= NOW() AND LOWER(COALESCE(status,'')) IN ('scheduled','finalized')";
+}
+
+function smsDashCompletedDefenseWhere(): string
+{
+    return "defense_datetime IS NOT NULL AND defense_datetime < NOW() AND LOWER(COALESCE(status,'')) IN ('scheduled','finalized','completed','passed')";
+}
+
 function smsDashSummary(string $roleKey): array
 {
     $pdo = smsDashDb();
@@ -383,11 +416,11 @@ function smsDashStatCards(string $roleKey): array
 
         case 'crad_officer':
             return [
-                $card('fa-file-lines', 'Total Applications', smsDashCount($pdo, 'crad_research_proposals'), 'primary', 'submitted proposals', 'applications_total'),
-                $card('fa-clock', 'Pending Applications', smsDashCount($pdo, 'crad_research_proposals', "status IN ('Submitted','In Progress','Panel Assigned')"), 'warning', 'awaiting decision', 'applications_pending'),
-                $card('fa-check-double', 'Approved Applications', smsDashCount($pdo, 'crad_research_proposals', "status = 'Approved'"), 'success', 'approved proposals', 'applications_approved'),
-                $card('fa-calendar-alt', 'Scheduled Defenses', smsDashCount($pdo, 'crad_research_defense_schedules', "defense_datetime IS NOT NULL AND LOWER(COALESCE(status,'')) IN ('scheduled','finalized')"), 'info', 'confirmed schedules', 'defenses_scheduled'),
-                $card('fa-check-circle', 'Completed Defenses', smsDashCount($pdo, 'crad_research_defense_schedules', "LOWER(COALESCE(status,'')) IN ('completed','passed')"), 'success', 'completed reviews', 'defenses_completed'),
+                $card('fa-file-lines', 'Total Applications', smsDashCount($pdo, 'crad_title_approvals'), 'primary', 'submitted title proposals', 'applications_total'),
+                $card('fa-clock', 'Pending Applications', smsDashCount($pdo, 'crad_title_approvals', smsDashTitlePendingWhere()), 'warning', 'awaiting decision', 'applications_pending'),
+                $card('fa-check-double', 'Approved Applications', smsDashCount($pdo, 'crad_title_approvals', smsDashTitleApprovedWhere()), 'success', 'fully approved titles', 'applications_approved'),
+                $card('fa-calendar-alt', 'Scheduled Defenses', smsDashCount($pdo, 'crad_research_defense_schedules', smsDashUpcomingDefenseWhere()), 'info', 'upcoming confirmed defenses', 'defenses_scheduled'),
+                $card('fa-check-circle', 'Completed Defenses', smsDashCount($pdo, 'crad_research_defense_schedules', smsDashCompletedDefenseWhere()), 'success', 'defense date has passed', 'defenses_completed'),
                 $card('fa-user-tie', 'Panel Members', smsDashCount($pdo, 'crad_research_panel_assignments'), 'info', 'panelists assigned', 'panel_assigned'),
             ];
 
@@ -504,11 +537,11 @@ function smsDashLiveValue(?PDO $pdo, string $key)
         case 'my_panel_defenses': return smsDashCount($pdo, 'crad_research_defense_schedules', 'research_group_id IN (SELECT research_group_id FROM crad_research_panel_assignments WHERE panel_user_id = ?)', [$viewerId]);
         case 'my_panel_evaluations': return smsDashCount($pdo, 'crad_preoral_defense_evaluations', 'panel_user_id = ?', [$viewerId]);
         case 'my_panel_final_evaluations': return smsDashCount($pdo, 'crad_final_defense_evaluations', 'panel_user_id = ?', [$viewerId]);
-        case 'applications_total': return smsDashCount($pdo, 'crad_research_proposals');
-        case 'applications_pending': return smsDashCount($pdo, 'crad_research_proposals', "status IN ('Submitted','In Progress','Panel Assigned')");
-        case 'applications_approved': return smsDashCount($pdo, 'crad_research_proposals', "status = 'Approved'");
-        case 'defenses_scheduled': return smsDashCount($pdo, 'crad_research_defense_schedules', "defense_datetime IS NOT NULL AND LOWER(COALESCE(status,'')) IN ('scheduled','finalized')");
-        case 'defenses_completed': return smsDashCount($pdo, 'crad_research_defense_schedules', "LOWER(COALESCE(status,'')) IN ('completed','passed')");
+        case 'applications_total': return smsDashCount($pdo, 'crad_title_approvals');
+        case 'applications_pending': return smsDashCount($pdo, 'crad_title_approvals', smsDashTitlePendingWhere());
+        case 'applications_approved': return smsDashCount($pdo, 'crad_title_approvals', smsDashTitleApprovedWhere());
+        case 'defenses_scheduled': return smsDashCount($pdo, 'crad_research_defense_schedules', smsDashUpcomingDefenseWhere());
+        case 'defenses_completed': return smsDashCount($pdo, 'crad_research_defense_schedules', smsDashCompletedDefenseWhere());
         case 'approved_research': return smsDashCount($pdo, 'crad_research_groups', "status = 'Approved'");
         case 'adviser_assigned':  return smsDashCount($pdo, 'crad_research_adviser_assignments');
         case 'panel_assigned':    return smsDashCount($pdo, 'crad_research_panel_assignments');

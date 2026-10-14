@@ -185,7 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'at' => time(),
                 ];
                 $authOn = smsAuthenticatorIsEnabled($userId);
-                $issued = smsIssueOtpToEmail($userId, 'password_change', $moduleKey, 10, 'password change');
+                $issued = smsIssueOtpToEmail($userId, 'password_change', $moduleKey, SMS2_OTP_TTL_MINUTES, 'password change');
                 if (!empty($issued['ok']) || $authOn) {
                     if (!empty($issued['ok']) && !empty($issued['show_local']) && !empty($issued['code'])) {
                         $_SESSION['flash_sec_otp'] = (string) $issued['code'];

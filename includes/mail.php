@@ -341,7 +341,7 @@ function smsSendPasswordResetEmail(array $user, string $resetUrl, ?string $toOve
  * @param array<string,mixed> $user
  * @return array{ok:bool,error:string,to:string}
  */
-function smsSendOtpEmail(array $user, string $code, string $purposeLabel = 'password change', int $ttlMinutes = 10): array
+function smsSendOtpEmail(array $user, string $code, string $purposeLabel = 'password change', int $ttlMinutes = SMS2_OTP_TTL_MINUTES): array
 {
     $to = trim((string) ($user['email'] ?? ''));
     if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {

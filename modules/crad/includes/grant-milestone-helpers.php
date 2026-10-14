@@ -119,8 +119,13 @@ function grantInitializeFundedProjectMilestones(PDO $crad, int $applicationId): 
         return ['ok' => true];
     }
 
+    // Start a transaction only when no caller already has one. The final grant sign-off wraps these
+    // helpers in its own transaction, and a nested commit would end that transaction early.
+    $ownsTransaction = !$crad->inTransaction();
     try {
-        $crad->beginTransaction();
+        if ($ownsTransaction) {
+            $crad->beginTransaction();
+        }
         $insert = $crad->prepare("
             INSERT INTO `crad_grant_funded_project_milestones`
                 (grant_application_id, milestone_order, milestone_name, completion_pct, status, created_at, updated_at)
@@ -137,14 +142,23 @@ function grantInitializeFundedProjectMilestones(PDO $crad, int $applicationId): 
             ]);
         }
 
-        $crad->commit();
+        if ($ownsTransaction) {
+            $crad->commit();
+        }
 
         return ['ok' => true];
     } catch (Throwable $e) {
-        if ($crad->inTransaction()) {
-            $crad->rollBack();
+        if ($ownsTransaction) {
+            if ($crad->inTransaction()) {
+                $crad->rollBack();
+            }
+            error_log('grantInitializeFundedProjectMilestones: ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Failed to initialize project milestones.'];
         }
-        error_log('grantInitializeFundedProjectMilestones: ' . $e->getMessage());
+
+        // Inside the caller's transaction: let the caller roll back and report the failure.
+        throw $e;
 
         return ['ok' => false, 'error' => 'Failed to initialize project milestones.'];
     }

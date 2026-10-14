@@ -136,8 +136,13 @@ function grantInitializeFundingDisbursementPlan(PDO $crad, int $applicationId): 
 
     $tranches = grantBuildDefaultTrancheAmounts($approved);
 
+    // Start a transaction only when no caller already has one. The final grant sign-off wraps these
+    // helpers in its own transaction, and a nested commit would end that transaction early.
+    $ownsTransaction = !$crad->inTransaction();
     try {
-        $crad->beginTransaction();
+        if ($ownsTransaction) {
+            $crad->beginTransaction();
+        }
         $insert = $crad->prepare("
             INSERT INTO `crad_grant_funding_disbursements`
                 (grant_application_id, tranche_number, tranche_label, approved_budget,
@@ -156,14 +161,23 @@ function grantInitializeFundingDisbursementPlan(PDO $crad, int $applicationId): 
             ]);
         }
 
-        $crad->commit();
+        if ($ownsTransaction) {
+            $crad->commit();
+        }
 
         return ['ok' => true];
     } catch (Throwable $e) {
-        if ($crad->inTransaction()) {
-            $crad->rollBack();
+        if ($ownsTransaction) {
+            if ($crad->inTransaction()) {
+                $crad->rollBack();
+            }
+            error_log('grantInitializeFundingDisbursementPlan: ' . $e->getMessage());
+
+            return ['ok' => false, 'error' => 'Failed to initialize disbursement plan.'];
         }
-        error_log('grantInitializeFundingDisbursementPlan: ' . $e->getMessage());
+
+        // Inside the caller's transaction: let the caller roll back and report the failure.
+        throw $e;
 
         return ['ok' => false, 'error' => 'Failed to initialize disbursement plan.'];
     }

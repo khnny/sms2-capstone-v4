@@ -50,7 +50,7 @@ $calendarMonthLabel = (new DateTimeImmutable('first day of this month', $calenda
             <label>Event type
                 <select class="form-select" data-event-filter="type">
                     <option value="">All event types</option>
-                    <option>Deadline</option><option>Defense</option>
+                    <option>Deadline</option><option>Defense</option><option>Announcement</option>
                 </select>
             </label>
             <label>Audience

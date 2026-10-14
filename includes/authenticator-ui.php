@@ -70,7 +70,7 @@ function smsHandleAuthenticatorPost(int $userId, string $action, array $post, st
     }
 
     if ($action === 'auth_send_setup_otp') {
-        $issued = smsIssueOtpToEmail($userId, 'auth_setup', null, 10, 'Authenticator setup');
+        $issued = smsIssueOtpToEmail($userId, 'auth_setup', null, SMS2_OTP_TTL_MINUTES, 'Authenticator setup');
         $_SESSION['auth_unlock_ui'] = $userId;
         $_SESSION['auth_email_otp_sent'] = 1;
         if (!empty($issued['show_local']) && !empty($issued['code'])) {

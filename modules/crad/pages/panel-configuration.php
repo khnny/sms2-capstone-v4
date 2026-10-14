@@ -83,6 +83,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $notice = 'Panelist pool status updated to ' . $panelStatus . '.';
             }
         }
+    } elseif ($action === 'save_panel_size') {
+        $limitsInput = is_array($_POST['limits'] ?? null) ? $_POST['limits'] : [];
+        $sizeError = null;
+        foreach ($defenseTypes as $type) {
+            $row = is_array($limitsInput[cradPanelSizeSlug($type)] ?? null) ? $limitsInput[cradPanelSizeSlug($type)] : [];
+            $result = cradSavePanelSizeLimits($type, (int) ($row['min'] ?? 0), (int) ($row['max'] ?? 0));
+            if (empty($result['ok'])) {
+                $sizeError = $type . ': ' . ($result['error'] ?? 'Invalid panel size.');
+                break;
+            }
+        }
+        if ($sizeError !== null) {
+            $error = $sizeError;
+        } else {
+            $notice = 'Panel size rules saved.';
+        }
     } elseif ($action === 'save_panel') {
         $selectedGroupId = max(0, (int) ($_POST['research_group_id'] ?? 0));
         $selectedDefenseType = trim((string) ($_POST['defense_type'] ?? ''));
@@ -92,9 +108,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         )));
         $chairValue = $_POST['chair_pool_id'] ?? 0;
         $chairPoolId = is_scalar($chairValue) ? max(0, (int) $chairValue) : 0;
+        $assignLimits = cradPanelSizeLimits($selectedDefenseType);
         if ($selectedGroupId <= 0 || !in_array($selectedDefenseType, $defenseTypes, true)
-            || count($poolIds) < 2 || !in_array($chairPoolId, $poolIds, true)) {
-            $error = 'Select a research group, a defense stage, at least two panelists, and exactly one chair.';
+            || count($poolIds) < $assignLimits['min'] || count($poolIds) > $assignLimits['max'] || !in_array($chairPoolId, $poolIds, true)) {
+            $error = 'Select a research group, a defense stage, ' . $assignLimits['min'] . ' to ' . $assignLimits['max'] . ' panelists, and exactly one chair.';
         } else {
             try {
                 $pdo->beginTransaction();
@@ -256,8 +273,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $assignmentStmt->execute([$selectedGroupId, $selectedDefenseType]);
                 $assignedPanelists = $assignmentStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
                 $chairs = array_filter($assignedPanelists, static fn(array $row): bool => $row['panel_role'] === 'Chair');
-                if (count($assignedPanelists) < 2 || count($chairs) !== 1) {
-                    throw new RuntimeException('Configure at least two approved panelists and exactly one panel chair before scheduling.');
+                $gateLimits = cradPanelSizeLimits($selectedDefenseType);
+                if (count($assignedPanelists) < $gateLimits['min'] || count($assignedPanelists) > $gateLimits['max'] || count($chairs) !== 1) {
+                    throw new RuntimeException('Configure ' . $gateLimits['min'] . ' to ' . $gateLimits['max'] . ' approved panelists and exactly one panel chair before scheduling.');
                 }
 
                 foreach ($assignedPanelists as $panelist) {
@@ -473,6 +491,35 @@ renderBreadcrumbs($breadcrumbs);
     <?php if ($notice !== ''): ?><div class="alert alert-success"><?= e($notice) ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
 
+    <section class="card border-0 shadow-sm mb-4" aria-labelledby="panelSizeRulesTitle">
+        <div class="card-header bg-white py-3"><strong id="panelSizeRulesTitle">Panel size rules</strong></div>
+        <div class="card-body">
+            <form method="post">
+                <?= csrfField() ?>
+                <input type="hidden" name="pool_action" value="save_panel_size">
+                <p class="small text-muted">Set how many panelists each defense needs. Exactly one chair is always required.</p>
+                <?php foreach ($defenseTypes as $sizeType): $sizeSlug = cradPanelSizeSlug($sizeType); $sizeLimits = cradPanelSizeLimits($sizeType); ?>
+                    <div class="row g-2 align-items-end mb-2">
+                        <div class="col-md-4"><strong><?= e($sizeType) ?></strong></div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-0" for="min_<?= e($sizeSlug) ?>">Minimum</label>
+                            <select class="form-select form-select-sm" id="min_<?= e($sizeSlug) ?>" name="limits[<?= e($sizeSlug) ?>][min]">
+                                <?php for ($n = 2; $n <= 7; $n++): ?><option value="<?= $n ?>" <?= $sizeLimits['min'] === $n ? 'selected' : '' ?>><?= $n ?></option><?php endfor; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-0" for="max_<?= e($sizeSlug) ?>">Maximum</label>
+                            <select class="form-select form-select-sm" id="max_<?= e($sizeSlug) ?>" name="limits[<?= e($sizeSlug) ?>][max]">
+                                <?php for ($n = 2; $n <= 7; $n++): ?><option value="<?= $n ?>" <?= $sizeLimits['max'] === $n ? 'selected' : '' ?>><?= $n ?></option><?php endfor; ?>
+                            </select>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                <button type="submit" class="btn btn-sm btn-primary">Save panel size rules</button>
+            </form>
+        </div>
+    </section>
+
     <?php if ($groups): ?>
     <form method="get" class="card border-0 shadow-sm mb-4">
         <div class="card-body row g-3 align-items-end">
@@ -507,7 +554,7 @@ renderBreadcrumbs($breadcrumbs);
                     <input type="hidden" name="pool_action" value="save_panel">
                     <input type="hidden" name="research_group_id" value="<?= $selectedGroupId ?>">
                     <input type="hidden" name="defense_type" value="<?= e($selectedDefenseType) ?>">
-                    <p class="small text-muted">Choose at least two approved pool panelists. Expertise, qualifications, preferred defense types, and availability are shown to help the officer decide. These are recommendations, not automatic decisions.</p>
+                    <p class="small text-muted">Choose <?= (int) cradPanelSizeLimits($selectedDefenseType)['min'] ?> to <?= (int) cradPanelSizeLimits($selectedDefenseType)['max'] ?> approved pool panelists. Expertise, qualifications, preferred defense types, and availability are shown to help the officer decide. These are recommendations, not automatic decisions.</p>
                     <?php if ($panelists): ?>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle">

@@ -19,9 +19,9 @@
 <!-- Global Search -->
 <script src="<?= BASE_URL ?>/assets/js/search.js?v=3"></script>
 <?php
-    $idleMinutes = 2;
+    $idleMinutes = 30;
     if (function_exists('smsSetting')) {
-        $idleMinutes = max(1, (int) smsSetting('session_timeout_minutes', '2'));
+        $idleMinutes = max(1, (int) smsSetting('session_timeout_minutes', '30'));
     }
     $idleSeconds = $idleMinutes * 60;
 ?>

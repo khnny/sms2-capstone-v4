@@ -216,6 +216,28 @@ function rpGetFinalDefenseRecommendation(PDO $crad, int $groupId): ?array
     return $recommendation ?: null;
 }
 
+/**
+ * Chapters are submitted in order (team decision): Chapter N can be submitted only after Chapter N-1
+ * has been submitted at least once by the group. Chapter 1 has no prerequisite.
+ */
+function rpPreviousChapterSubmitted(PDO $crad, int $groupId, int $chapter): bool
+{
+    if ($chapter <= 1) {
+        return true;
+    }
+    $stmt = $crad->prepare(
+        "SELECT COUNT(*) FROM `crad_chapter_submissions`
+          WHERE research_group_id = :gid AND chapter_number = :prev"
+    );
+    $stmt->execute([':gid' => $groupId, ':prev' => $chapter - 1]);
+    return (int) $stmt->fetchColumn() > 0;
+}
+
+function rpPreviousChapterMessage(int $chapter): string
+{
+    return 'Submit Chapter ' . ($chapter - 1) . ' first. Chapters are submitted in order.';
+}
+
 function rpChapterMilestoneNames(): array
 {
     return [
@@ -612,19 +634,22 @@ function rpChapterSubmissionEligibility(PDO $crad, int $groupId): array
 {
     $eligibility = [];
     foreach (rpChapterMilestoneNames() as $chapter => $label) {
-        // A chapter becomes submittable in the Submission Form as soon as the
-        // Adviser approves that chapter's latest Progress Update (Research
-        // Development review). Each chapter is independent — real-time from the
-        // database, no sequential/panel-dependent prerequisite.
-        // chapterSubmitDocument() enforces the exact same rule server-side via
-        // rpAdviserApprovedChapter(), so UI and validation always agree.
+        // A chapter is submittable when the Adviser approves its latest Progress
+        // Update AND the previous chapter has been submitted (chapters are in order).
+        // chapterSubmitDocument() enforces the same two rules server-side.
         $approval = rpAdviserApprovedChapter($crad, $groupId, (int) $chapter);
-        $eligible = (bool) $approval;
+        $previousSubmitted = rpPreviousChapterSubmitted($crad, $groupId, (int) $chapter);
+        $eligible = (bool) $approval && $previousSubmitted;
+        if (!$previousSubmitted) {
+            $message = rpPreviousChapterMessage((int) $chapter);
+        } else {
+            $message = $approval ? 'Ready for Submission' : 'Adviser Approval Required';
+        }
         $eligibility[(int) $chapter] = [
             'chapter' => (int) $chapter,
             'label' => $label,
             'eligible' => $eligible,
-            'message' => $approval ? 'Ready for Submission' : 'Adviser Approval Required',
+            'message' => $message,
             'approval' => $approval,
         ];
     }

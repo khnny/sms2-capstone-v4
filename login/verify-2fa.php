@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'use_email') {
         $_SESSION['pending_2fa']['method'] = 'email';
-        $issued = smsIssueOtpToEmail($userId, $purpose, 'System', 10, 'login verification');
+        $issued = smsIssueOtpToEmail($userId, $purpose, 'System', SMS2_OTP_TTL_MINUTES, 'login verification');
         if (!empty($issued['ok'])) {
             if (!empty($issued['show_local']) && !empty($issued['code'])) {
                 $_SESSION['flash_2fa_otp'] = (string) $issued['code'];

@@ -71,7 +71,7 @@ try {
         ];
 
         if ($info['method'] === 'email') {
-            $issued = smsIssueOtpToEmail($uid, 'passkey_add', null, 10, 'passkey setup');
+            $issued = smsIssueOtpToEmail($uid, 'passkey_add', null, SMS2_OTP_TTL_MINUTES, 'passkey setup');
             if (empty($issued['ok'])) {
                 smsPasskeyJson(['ok' => false, 'error' => (string) ($issued['error'] ?: 'Could not send email code.')], 400);
             }
@@ -97,7 +97,7 @@ try {
         if ($info['method'] !== 'email') {
             smsPasskeyJson(['ok' => false, 'error' => 'Email verification is not required for your account.'], 400);
         }
-        $issued = smsIssueOtpToEmail($uid, 'passkey_add', null, 10, 'passkey setup');
+        $issued = smsIssueOtpToEmail($uid, 'passkey_add', null, SMS2_OTP_TTL_MINUTES, 'passkey setup');
         if (empty($issued['ok'])) {
             smsPasskeyJson(['ok' => false, 'error' => (string) ($issued['error'] ?: 'Could not send email code.')], 400);
         }
@@ -176,7 +176,7 @@ try {
         ];
 
         if ($info['method'] === 'email') {
-            $issued = smsIssueOtpToEmail($uid, 'passkey_remove', null, 10, 'passkey removal');
+            $issued = smsIssueOtpToEmail($uid, 'passkey_remove', null, SMS2_OTP_TTL_MINUTES, 'passkey removal');
             if (empty($issued['ok'])) {
                 smsPasskeyJson(['ok' => false, 'error' => 'Could not send email code.'], 400);
             }
@@ -202,7 +202,7 @@ try {
         if ($info['method'] !== 'email') {
             smsPasskeyJson(['ok' => false, 'error' => 'Email verification is not required for your account.'], 400);
         }
-        $issued = smsIssueOtpToEmail($uid, 'passkey_remove', null, 10, 'passkey removal');
+        $issued = smsIssueOtpToEmail($uid, 'passkey_remove', null, SMS2_OTP_TTL_MINUTES, 'passkey removal');
         if (empty($issued['ok'])) {
             smsPasskeyJson(['ok' => false, 'error' => 'Could not send email code.'], 400);
         }

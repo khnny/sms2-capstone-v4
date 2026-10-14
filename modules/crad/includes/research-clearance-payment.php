@@ -975,9 +975,9 @@ function rcpPurgeDisconnectedPayments(PDO $crad): int
     $requiredTables = ['crad_research_clearance_payments', 'crad_research_groups'];
     foreach ($requiredTables as $table) {
         try {
-            $tableCheck = $crad->prepare('SHOW TABLES LIKE ?');
+            $tableCheck = $crad->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
             $tableCheck->execute([$table]);
-            if (!$tableCheck->fetchColumn()) {
+            if (!(int) $tableCheck->fetchColumn()) {
                 error_log('RCP cleanup skipped; missing table: ' . $table);
                 return 0;
             }

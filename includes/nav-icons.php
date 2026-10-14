@@ -42,6 +42,7 @@ if (!function_exists('smsNavPageIcon')) {
             'research-coordinator-management' => 'fa-user-cog',
             'research-grants-funding-assistance' => 'fa-hand-holding-usd',
             'research-defense-scheduling' => 'fa-calendar-check',
+            'panel-applications' => 'fa-clipboard-check',
             'documentation-publication-management' => 'fa-book',
             'research-analytics-reporting' => 'fa-chart-line',
             'dashboard-analytics' => 'fa-chart-pie',

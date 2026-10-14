@@ -143,7 +143,30 @@ function smsMatrixRoleKey(string $roleKey): string
 
 function isAuthenticated(): bool
 {
-    return !empty($_SESSION['user_id']);
+    if (empty($_SESSION['user_id'])) {
+        return false;
+    }
+    // P2.10: an account that is archived, deactivated, or suspended loses access on its next page load,
+    // even if it was logged in. Checked once per request. A failed lookup denies access (fail closed).
+    static $statusChecked = [];
+    $uid = (int) $_SESSION['user_id'];
+    if (!array_key_exists($uid, $statusChecked)) {
+        try {
+            $stmt = db()->prepare('SELECT status FROM sms2_users WHERE id = ? LIMIT 1');
+            $stmt->execute([$uid]);
+            $status = (string) $stmt->fetchColumn();
+            $statusChecked[$uid] = in_array($status, ['active', 'locked'], true);
+        } catch (Throwable $e) {
+            error_log('Session status check failed: ' . $e->getMessage());
+            $statusChecked[$uid] = false;
+        }
+    }
+    if (!$statusChecked[$uid]) {
+        $_SESSION = [];
+        return false;
+    }
+
+    return true;
 }
 
 function requireAuth(): void
@@ -837,7 +860,7 @@ function getVisibleModules(array $modules): array
                 'Student Information' => ['my-profile', 'student-id'],
                 'Financial' => ['account-balance', 'payment-history'],
                 'Academics' => ['class-schedule', 'academic-records', 'subjects-professors', 'grades-portal'],
-                'Research' => ['research-group', 'research-proposal-submission'],
+                'Research' => ['research-group', 'research-proposal-submission', 'panel-application'],
                 'Document Submission' => ['submit-chapters', 'my-submissions', 'submission-status', 'submission-history'],
                 'Research Clearance' => ['college-payment', 'research-clearance'],
             ],
@@ -853,6 +876,7 @@ function getVisibleModules(array $modules): array
                 ['slug' => 'grades-portal', 'title' => 'Grades Portal'],
                 ['slug' => 'research-group', 'title' => 'Research Group'],
                 ['slug' => 'research-proposal-submission', 'title' => 'Research Proposal'],
+                ['slug' => 'panel-application', 'title' => 'Panel Application'],
                 ['slug' => 'submit-chapters', 'title' => 'Submit Chapter 1-3'],
                 ['slug' => 'college-payment', 'title' => 'Upload Collage Payment'],
                 ['slug' => 'research-clearance', 'title' => 'Research Services Clearance'],

@@ -90,20 +90,9 @@ function cradEnsureDefenseScheduleTable(PDO $pdo): void
 
 function cradPruneOrphanDefenseSchedules(PDO $pdo): void
 {
-    cradEnsureDefenseScheduleTable($pdo);
-    $pdo->exec("
-        DELETE FROM `crad_research_defense_schedules`
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM `crad_research_proposals` p
-            WHERE (research_defense_schedules.proposal_id IS NOT NULL AND p.id = research_defense_schedules.proposal_id)
-               OR (
-                    research_defense_schedules.proposal_number IS NOT NULL
-                    AND research_defense_schedules.proposal_number <> ''
-                    AND (p.proposal_number = research_defense_schedules.proposal_number OR p.ref_code = research_defense_schedules.proposal_number)
-               )
-        )
-    ");
+    // Intentionally does nothing. This used to delete schedules with no matching legacy proposal row.
+    // Groups on the title-approval path have no legacy row, so the delete removed their real schedules.
+    // Schedules are records and are never removed automatically (P1.4).
 }
 
 function cradRecordDefenseSchedule(PDO $pdo, string $groupNumber, string $proposalRef): ?array

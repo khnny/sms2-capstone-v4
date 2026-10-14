@@ -128,7 +128,7 @@ renderBreadcrumbs($breadcrumbs);
                 </div>
                 <div class="col-md-3">
                     <div class="text-muted">File</div>
-                    <div class="fw-semibold text-truncate" data-rsc-meta-file><?= e((string) ($public['uploaded_original'] ?: '—')) ?></div>
+                    <div class="fw-semibold text-truncate" data-rsc-meta-file><?= e((string) (($public['uploaded_original'] ?? '') ?: '—')) ?></div>
                 </div>
             </div>
         </div>

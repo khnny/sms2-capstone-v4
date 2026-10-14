@@ -92,3 +92,4 @@ require_once ROOT_PATH . '/includes/header.php';
     <?php require_once ROOT_PATH . '/includes/sidebar.php'; ?>
     <div class="sms-content">
         <main class="sms-main">
+            <?php require_once ROOT_PATH . '/includes/deadline-reminders.php'; smsRenderDeadlineReminderBanner(); ?>

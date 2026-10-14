@@ -47,7 +47,7 @@ try {
                     WHEN rds.id IS NOT NULL THEN 'Final Defense Scheduled'
                     ELSE 'In Progress'
                 END AS status,
-                COALESCE(fma.updated_at, ms.updated_at, rds.updated_at, rg.updated_at) AS updated
+                COALESCE(fma.updated_at, ms.updated_at, rds.updated_at, rg.created_at) AS updated
          FROM `crad_research_groups` rg
          LEFT JOIN `crad_final_manuscript_approvals` fma ON fma.research_group_id = rg.id
          LEFT JOIN `crad_manuscript_submissions` ms ON ms.id = (
@@ -60,7 +60,7 @@ try {
              WHERE rds2.research_group_id = rg.id AND rds2.defense_type = 'Final Defense'
              ORDER BY rds2.id DESC LIMIT 1
          )
-         ORDER BY COALESCE(fma.updated_at, ms.updated_at, rds.updated_at, rg.updated_at) DESC, rg.id DESC
+         ORDER BY COALESCE(fma.updated_at, ms.updated_at, rds.updated_at, rg.created_at) DESC, rg.id DESC
          LIMIT 10"
     )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 } catch (Throwable $e) {

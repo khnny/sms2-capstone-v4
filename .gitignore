@@ -23,6 +23,36 @@ storage/uploads/*
 
 # Accidental nested duplicate copy
 sms2_system/
+.kilo/worktrees/
+.cursor/
+/database/.installed
+/database/Home - Shortcut.lnk
+/database/official_accounts.php
+/database/seed_accounts.php
+/database/seed_panel_members.php
+/database/restore_user_passwords.php
+/database/update_official_credentials.php
+/database/_*.php
+/database/crad_demo/
+/database/HOSTFORGE_DEPLOY.txt
+*.lnk
+/tools/deploy-infinityfree.ps1
+/tools/deploy-infinityfree.bat
+/tools/ftp-list.ps1
+/tools/ftp-read.ps1
+/tools/ftp-upload.py
+/tools/git-auto-sync.ps1
+/tools/setup-git-sync-task.ps1
+/tools/start-git-auto-sync.bat
+/tools/php-lint-errors.txt
+
+# Local database dumps
+/*.sql
+
+# User-uploaded documents (keep the empty directory structure)
+/uploads/**
+!/uploads/**/
+!/uploads/**/.gitkeep
 
 # OS / editor
 .DS_Store

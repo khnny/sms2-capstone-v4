@@ -176,6 +176,7 @@ function rdIsOfficialResearchGroup(PDO $pdo, int $groupId): bool
 
 function rdSchedulePanelRows(PDO $pdo, int $groupId): array
 {
+    cradEnsurePanelAvailabilityWindows($pdo);
     $stmt = $pdo->prepare(
         "SELECT rpa.panel_user_id,
                 COALESCE(NULLIF(u.full_name, ''), NULLIF(rpa.panel_name, ''), 'Panel Member') AS panel_name,

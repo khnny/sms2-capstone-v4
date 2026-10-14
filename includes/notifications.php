@@ -258,7 +258,7 @@ function smsCurrentUserNotifications(int $limit = 8): array
                     OR EXISTS (
                         SELECT 1
                         FROM `crad_research_groups` panel_rg
-                        WHERE panel_rg.id = panel_assignment_notifications.research_group_id
+                        WHERE panel_rg.id = crad_panel_assignment_notifications.research_group_id
                           AND " . cradOfficialRegistryGroupWhereSql('panel_rg') . "
                     )
                 )"

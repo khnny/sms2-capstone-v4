@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'hash' => password_hash($password, PASSWORD_DEFAULT),
             'at' => time(),
         ];
-        $issued = smsIssueOtpToEmail($userId, 'password_change', 'admin-account', 10, 'password change');
+        $issued = smsIssueOtpToEmail($userId, 'password_change', 'admin-account', SMS2_OTP_TTL_MINUTES, 'password change');
         if (!empty($issued['ok'])) {
             if (!empty($issued['show_local']) && !empty($issued['code'])) {
                 $_SESSION['flash_admin_otp'] = (string) $issued['code'];

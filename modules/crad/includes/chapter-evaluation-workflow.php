@@ -777,6 +777,9 @@ function chapterSubmitDocument(PDO $crad, array $group, int $chapter, array $fil
             'error' => 'Adviser approval is required before this chapter can be submitted for Grammarian evaluation.',
         ];
     }
+    if (!rpPreviousChapterSubmitted($crad, (int) $group['id'], $chapter)) {
+        return ['ok' => false, 'error' => rpPreviousChapterMessage($chapter)];
+    }
     if ($token === '' || !preg_match('/^[a-f0-9]{32,64}$/', $token)) {
         return ['ok' => false, 'error' => 'Invalid submission token. Please refresh and try again.'];
     }

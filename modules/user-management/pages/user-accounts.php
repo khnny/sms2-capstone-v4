@@ -461,11 +461,17 @@ renderBreadcrumbs($breadcrumbs);
             <?= $total ?> <?= $isArchiveView ? 'archived' : 'users' ?>
         </span>
     </div>
+    <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2" id="umBulkBar" hidden>
+        <span class="text-muted small" id="umBulkCount" aria-live="polite">0 selected</span>
+        <button type="button" class="btn btn-sm btn-outline-warning" id="umBulkArchive">Archive selected</button>
+        <button type="button" class="btn btn-sm btn-outline-success" id="umBulkRestore">Restore selected</button>
+    </div>
     <div class="table-responsive sms-table--responsive">
         <table class="table submodule-table align-middle mb-0">
                 <thead>
                     <tr>
-                        <th style="padding-left:1.2rem;">User</th>
+                        <th style="width:2.4rem;padding-left:1.2rem;"><input type="checkbox" class="form-check-input" id="umSelectAll" aria-label="Select all visible accounts"></th>
+                        <th>User</th>
                         <th>Username</th>
                         <th>Role</th>
                         <th>Status</th>
@@ -477,7 +483,7 @@ renderBreadcrumbs($breadcrumbs);
                 <tbody id="umTableBody">
                     <?php if (!$users): ?>
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <?php if ($isArchiveView): ?>
                                     <?= smsIcon('archive', ['class' => 'um-empty-icon mb-2 d-block opacity-50']) ?>
                                     Archive is empty. Archived users from User Accounts will appear here.
@@ -494,7 +500,7 @@ renderBreadcrumbs($breadcrumbs);
                             ['key' => 'student', 'label' => 'Students Account', 'users' => $studentUsers],
                         ] as $group): ?>
                             <tr class="um-group-row" data-group-row data-group-key="<?= e($group['key']) ?>"<?= empty($group['users']) ? ' hidden' : '' ?>>
-                                <td colspan="7">
+                                <td colspan="8">
                                     <div class="um-group-title">
                                         <span><?= e($group['label']) ?></span>
                                         <small data-group-count><?= count($group['users']) ?> account<?= count($group['users']) === 1 ? '' : 's' ?></small>
@@ -514,6 +520,7 @@ renderBreadcrumbs($breadcrumbs);
                             data-role="<?= htmlspecialchars($u['role']) ?>"
                             data-status="<?= htmlspecialchars($u['status']) ?>"
                             data-notes="<?= htmlspecialchars((string) ($u['notes'] ?? '')) ?>">
+                            <td style="padding-left:1.2rem;"><input type="checkbox" class="form-check-input um-row-select" value="<?= (int) $u['id'] ?>" aria-label="Select <?= htmlspecialchars($u['name']) ?>"></td>
                             <td style="padding-left:1.2rem;">
                                 <div class="um-user-cell">
                                     <span class="um-avatar <?= $col ?>"><?= strtoupper(substr((string) ($u['name'] ?? '?'), 0, 1) ?: '?') ?></span>
@@ -595,7 +602,7 @@ renderBreadcrumbs($breadcrumbs);
                 </tbody>
             </table>
             <tr id="umNoResults" style="display:none;">
-                <td colspan="7" class="text-center py-5 text-muted sms-table-empty">
+                <td colspan="8" class="text-center py-5 text-muted sms-table-empty">
                     <?= smsIcon('search-minus', ['class' => 'um-empty-icon mb-2 d-block opacity-50']) ?>No users match your filters.
                 </td>
             </tr>
@@ -923,7 +930,7 @@ renderBreadcrumbs($breadcrumbs);
         tr.className = 'um-group-row';
         tr.setAttribute('data-group-row', '');
         tr.setAttribute('data-group-key', key);
-        tr.innerHTML = '<td colspan="7"><div class="um-group-title"><span>'
+        tr.innerHTML = '<td colspan="8"><div class="um-group-title"><span>'
             + (GROUP_LABELS[key] || key)
             + '</span><small data-group-count>0 accounts</small></div></td>';
         var order = ['system', 'faculty', 'student'];
@@ -1289,6 +1296,47 @@ renderBreadcrumbs($breadcrumbs);
                 });
             });
         });
+
+        function umSelectedIds() {
+            return Array.prototype.map.call(document.querySelectorAll('.um-row-select:checked'), function (c) { return c.value; });
+        }
+        function umRefreshBulk() {
+            var n = umSelectedIds().length;
+            var bar = document.getElementById('umBulkBar');
+            var count = document.getElementById('umBulkCount');
+            if (bar) bar.hidden = n === 0;
+            if (count) count.textContent = n + ' selected';
+        }
+        document.addEventListener('change', function (e) {
+            if (e.target.classList && e.target.classList.contains('um-row-select')) umRefreshBulk();
+            if (e.target.id === 'umSelectAll') {
+                Array.prototype.forEach.call(document.querySelectorAll('.um-user-row'), function (row) {
+                    if (row.hidden || row.style.display === 'none') return;
+                    var c = row.querySelector('.um-row-select');
+                    if (c) c.checked = e.target.checked;
+                });
+                umRefreshBulk();
+            }
+        });
+        function umBulkApply(status) {
+            var ids = umSelectedIds();
+            if (!ids.length) return;
+            var verb = status === 'active' ? 'restore' : 'archive';
+            if (!window.confirm('Are you sure you want to ' + verb + ' ' + ids.length + ' account(s)?')) return;
+            postJson({ action: 'bulk_set_status', user_ids: ids, status: status }).then(function (data) {
+                if (data.ok) {
+                    location.href = status === 'active' ? (ACCOUNTS + '?restored=1') : (ARCHIVE + '&archived=1');
+                } else {
+                    var bulkError = umErrorText(data, 'Bulk update failed');
+                    showPageAlert(bulkError, 'danger');
+                    if (typeof umShowToast === 'function') umShowToast(bulkError, 'danger');
+                }
+            });
+        }
+        var bulkArchiveBtn = document.getElementById('umBulkArchive');
+        if (bulkArchiveBtn) bulkArchiveBtn.addEventListener('click', function () { umBulkApply('inactive'); });
+        var bulkRestoreBtn = document.getElementById('umBulkRestore');
+        if (bulkRestoreBtn) bulkRestoreBtn.addEventListener('click', function () { umBulkApply('active'); });
 
         document.querySelectorAll('.um-delete-user').forEach(function (btn) {
             btn.addEventListener('click', function () {

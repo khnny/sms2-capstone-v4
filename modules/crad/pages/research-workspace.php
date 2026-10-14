@@ -198,6 +198,11 @@ $cradOfficerTabs = [
                 'page' => 'research-defense-scheduling',
             ],
             [
+                'title' => 'Panel Applications',
+                'description' => 'Review panel defense requests from research groups.',
+                'page' => 'panel-applications',
+            ],
+            [
                 'title' => 'Final Manuscript Review',
                 'description' => 'Evaluate submitted final manuscripts.',
                 'page' => 'final-manuscript-review',

@@ -1002,3 +1002,43 @@ function cradReleaseAssignmentsWithoutTitleApproval(PDO $pdo): void
         error_log('Release assignments without title approval failed: ' . $e->getMessage());
     }
 }
+
+/**
+ * Make sure the panel availability table has the days-and-times column (P1.3).
+ * An older database dump can lack it, and the research director and panel profile pages read and write it.
+ * Safe to call on every request: it does nothing when the table and column already exist.
+ */
+function cradEnsurePanelAvailabilityWindows(?PDO $pdo): void
+{
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+    try {
+        $pdo->exec(
+            "CREATE TABLE IF NOT EXISTS `crad_panel_member_availability` (
+                id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                panel_user_id INT UNSIGNED NOT NULL,
+                availability_status VARCHAR(40) NOT NULL DEFAULT 'Pending',
+                availability_windows_json LONGTEXT DEFAULT NULL,
+                notes TEXT DEFAULT NULL,
+                updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY uniq_panel_availability_user (panel_user_id),
+                KEY idx_panel_availability_status (availability_status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+        );
+        $check = $pdo->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+              WHERE TABLE_SCHEMA = DATABASE()
+                AND TABLE_NAME = 'crad_panel_member_availability'
+                AND COLUMN_NAME = 'availability_windows_json'"
+        );
+        $check->execute();
+        if (!(int) $check->fetchColumn()) {
+            $pdo->exec("ALTER TABLE `crad_panel_member_availability` ADD COLUMN `availability_windows_json` LONGTEXT DEFAULT NULL AFTER `availability_status`");
+        }
+    } catch (Throwable $e) {
+        error_log('Panel availability schema check failed: ' . $e->getMessage());
+    }
+}

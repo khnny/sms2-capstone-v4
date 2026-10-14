@@ -391,3 +391,38 @@ function cradSyncApprovedPanelistPool(PDO $pdo, int $applicationId): void
         $poolData['approval_date'],
     ]);
 }
+
+/** Setting-key suffix for a defense type, for example "Proposal Defense" -> "proposal_defense". */
+function cradPanelSizeSlug(string $defenseType): string
+{
+    return trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower($defenseType)), '_');
+}
+
+/**
+ * Allowed number of panelists for a defense type (P1.2: configure number of panelists).
+ * Defaults to 2 to 5 members. Exactly one chair is always required, separately from these limits.
+ * @return array{min: int, max: int}
+ */
+function cradPanelSizeLimits(string $defenseType): array
+{
+    $slug = cradPanelSizeSlug($defenseType);
+    $min = (int) smsSetting('crad_panel_min_' . $slug, '2');
+    $max = (int) smsSetting('crad_panel_max_' . $slug, '5');
+    $min = max(2, min(7, $min));
+    $max = max($min, min(7, $max));
+
+    return ['min' => $min, 'max' => $max];
+}
+
+/** @return array{ok: bool, error?: string} */
+function cradSavePanelSizeLimits(string $defenseType, int $min, int $max): array
+{
+    if ($min < 2 || $max > 7 || $max < $min) {
+        return ['ok' => false, 'error' => 'Panel size must be between 2 and 7 members, and the maximum cannot be below the minimum.'];
+    }
+    $slug = cradPanelSizeSlug($defenseType);
+    smsSetSetting('crad_panel_min_' . $slug, (string) $min);
+    smsSetSetting('crad_panel_max_' . $slug, (string) $max);
+
+    return ['ok' => true];
+}

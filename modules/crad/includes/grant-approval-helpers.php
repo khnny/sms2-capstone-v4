@@ -1043,6 +1043,16 @@ function grantSubmitApprovalSignoff(
     }
 
     try {
+        // Create or check every table the final approval writes to BEFORE the transaction starts.
+        // MySQL commits implicitly on CREATE TABLE, so a schema check inside the transaction ends it early
+        // and the final commit then fails, even though the status was already written.
+        require_once __DIR__ . '/grant-evaluation-helpers.php';
+        require_once __DIR__ . '/grant-funding-helpers.php';
+        require_once __DIR__ . '/grant-milestone-helpers.php';
+        grantEnsureEvaluationTables($crad);
+        grantEnsureFundingTables($crad);
+        grantEnsureMilestoneTables($crad);
+
         $crad->beginTransaction();
 
         $crad->prepare("

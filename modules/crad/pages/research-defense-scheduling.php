@@ -82,20 +82,9 @@ function cradEnsureDefenseScheduleTable(PDO $pdo): void
 
 function cradPruneOrphanDefenseSchedules(PDO $pdo): void
 {
-    cradEnsureDefenseScheduleTable($pdo);
-    $pdo->exec("
-        DELETE FROM `crad_research_defense_schedules`
-        WHERE NOT EXISTS (
-            SELECT 1
-            FROM `crad_research_proposals` p
-            WHERE (research_defense_schedules.proposal_id IS NOT NULL AND p.id = research_defense_schedules.proposal_id)
-               OR (
-                    research_defense_schedules.proposal_number IS NOT NULL
-                    AND research_defense_schedules.proposal_number <> ''
-                    AND (p.proposal_number = research_defense_schedules.proposal_number OR p.ref_code = research_defense_schedules.proposal_number)
-               )
-        )
-    ");
+    // Intentionally does nothing. This used to delete schedules with no matching legacy proposal row.
+    // Groups on the title-approval path have no legacy row, so the delete removed their real schedules.
+    // Schedules are records and are never removed automatically (P1.4).
 }
 
 function cradDefenseScheduleRows(PDO $pdo): array
@@ -118,7 +107,7 @@ function cradDefenseScheduleRows(PDO $pdo): array
                 rds.status,
                 rds.updated_at
             FROM `crad_research_defense_schedules` rds
-            JOIN `crad_research_proposals` p
+            LEFT JOIN `crad_research_proposals` p
               ON (rds.proposal_id IS NOT NULL AND p.id = rds.proposal_id)
               OR (
                     rds.proposal_number IS NOT NULL
@@ -389,6 +378,30 @@ $cradProcess = [
 ];
 
 require_once __DIR__ . '/../../../includes/breadcrumbs.php';
+require_once __DIR__ . '/../includes/defense-reschedule.php';
+$rescheduleNotice = null;
+$rescheduleError = null;
+$rescheduleOptions = [];
+$rescheduleHistory = [];
+$rescheduleDb = cradDb();
+if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['defense_action'] ?? '') === 'reschedule') {
+    if (!csrfVerify()) {
+        $rescheduleError = 'Security token expired. Refresh the page and try again.';
+    } elseif ($rescheduleDb instanceof PDO) {
+        $result = cradRescheduleDefense($rescheduleDb, $_POST, (int) getCurrentUserId(), (string) getCurrentUserName());
+        if ($result['ok']) {
+            $rescheduleNotice = $result['message'];
+        } else {
+            $rescheduleError = $result['error'];
+        }
+    } else {
+        $rescheduleError = 'CRAD database unavailable.';
+    }
+}
+if ($rescheduleDb instanceof PDO) {
+    $rescheduleOptions = cradDefenseActiveSchedules($rescheduleDb);
+    $rescheduleHistory = cradDefenseHistoryRows($rescheduleDb);
+}
 require_once __DIR__ . '/../../../includes/layout-start.php';
 ?>
 
@@ -489,4 +502,72 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 </script>
+<?php if ($rescheduleNotice): ?><div class="alert alert-success"><?= e($rescheduleNotice) ?></div><?php endif; ?>
+<?php if ($rescheduleError): ?><div class="alert alert-danger"><?= e($rescheduleError) ?></div><?php endif; ?>
+<section class="card border-0 shadow-sm mb-4" aria-labelledby="rescheduleTitle">
+    <div class="card-header bg-white py-3"><strong id="rescheduleTitle">Reschedule a defense</strong></div>
+    <div class="card-body">
+        <form method="post">
+            <?= csrfField() ?>
+            <input type="hidden" name="defense_action" value="reschedule">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label small mb-0" for="resSchedule">Defense</label>
+                    <select class="form-select form-select-sm" id="resSchedule" name="schedule_id" required>
+                        <option value="">Choose a defense</option>
+                        <?php foreach ($rescheduleOptions as $opt): ?>
+                            <option value="<?= (int) $opt['id'] ?>"><?= e(($opt['group_number'] ?: 'Group') . ' · ' . ($opt['defense_type'] ?: '') . ' · ' . date('M j, Y g:i A', strtotime((string) $opt['defense_datetime'])) . ' · ' . ($opt['venue'] ?: 'No venue')) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small mb-0" for="resVenue">Venue</label>
+                    <input class="form-control form-control-sm" id="resVenue" name="new_venue" maxlength="160" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small mb-0" for="resDate">Date</label>
+                    <input type="date" class="form-control form-control-sm" id="resDate" name="new_date" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small mb-0" for="resStart">Start</label>
+                    <input type="time" class="form-control form-control-sm" id="resStart" name="new_start" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small mb-0" for="resEnd">End</label>
+                    <input type="time" class="form-control form-control-sm" id="resEnd" name="new_end" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label small mb-0" for="resReason">Reason</label>
+                    <input class="form-control form-control-sm" id="resReason" name="reason" minlength="5" maxlength="500" required>
+                </div>
+            </div>
+            <button class="btn btn-sm btn-primary mt-3" type="submit">Reschedule defense</button>
+        </form>
+    </div>
+</section>
+<section class="card border-0 shadow-sm mb-4" aria-labelledby="historyTitle">
+    <div class="card-header bg-white py-3"><strong id="historyTitle">Schedule history</strong></div>
+    <div class="card-body table-responsive">
+        <?php if (!$rescheduleHistory): ?>
+            <p class="text-muted small mb-0">No reschedules yet.</p>
+        <?php else: ?>
+            <table class="table table-sm align-middle mb-0">
+                <thead><tr><th>Changed</th><th>Group</th><th>Defense</th><th>From</th><th>To</th><th>Reason</th><th>By</th></tr></thead>
+                <tbody>
+                <?php foreach ($rescheduleHistory as $h): ?>
+                    <tr>
+                        <td><?= e(date('M j, Y g:i A', strtotime((string) $h['changed_at']))) ?></td>
+                        <td><?= e((string) $h['group_number']) ?></td>
+                        <td><?= e((string) $h['defense_type']) ?></td>
+                        <td><?= e(($h['old_datetime'] ? date('M j, Y g:i A', strtotime((string) $h['old_datetime'])) : '—') . ' · ' . ($h['old_venue'] ?: '—')) ?></td>
+                        <td><?= e(date('M j, Y g:i A', strtotime((string) $h['new_datetime'])) . ' · ' . $h['new_venue']) ?></td>
+                        <td><?= e((string) $h['reason']) ?></td>
+                        <td><?= e((string) ($h['changed_by_name'] ?: '—')) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
+    </div>
+</section>
 <?php require_once __DIR__ . '/../../../includes/layout-end.php'; ?>

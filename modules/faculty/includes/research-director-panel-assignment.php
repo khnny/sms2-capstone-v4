@@ -423,6 +423,7 @@ function rdPanelSelectedUrl(string $view, int $groupId, array $selectedIds): str
 
 function rdPanelAssignedRows(int $groupId): array
 {
+    cradEnsurePanelAvailabilityWindows(cradDb());
     $crad = rdPanelDb();
     if (!$crad instanceof PDO || $groupId <= 0) {
         return [];

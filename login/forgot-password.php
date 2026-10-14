@@ -1,7 +1,7 @@
 <?php
 /**
  * SMS 2 – Forgot password (email → 6-digit OTP → new password)
- * OTP expires in 2 minutes.
+ * OTP expires in SMS2_OTP_TTL_MINUTES minutes (5).
  */
 require_once __DIR__ . '/../config/config.php';
 require_once ROOT_PATH . '/includes/authentication.php';
@@ -22,7 +22,7 @@ if (isAuthenticated()) {
 }
 
 const SMS_FORGOT_OTP_PURPOSE = 'forgot_password';
-const SMS_FORGOT_OTP_TTL_MIN = 2;
+const SMS_FORGOT_OTP_TTL_MIN = SMS2_OTP_TTL_MINUTES;
 const SMS_FORGOT_PW_WINDOW_SEC = 300;
 
 $message = '';
@@ -258,7 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         $message = 'Email could not be sent (' . ($issued['error'] ?? 'SMTP error') . '). '
                                             . 'Use the code below (dev fallback enabled).';
                                     } else {
-                                        $message = 'We sent a 6-digit code to ' . $accountEmail . '. It expires in 2 minutes.';
+                                        $message = 'We sent a 6-digit code to ' . $accountEmail . '. It expires in ' . SMS_FORGOT_OTP_TTL_MIN . ' minutes.';
                                     }
                                     logActivity(
                                         'password_reset_request',
@@ -302,7 +302,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($session['otp_expires_at'] > 0 && time() > $session['otp_expires_at']) {
                     smsClearCodeGate($userId, SMS_FORGOT_OTP_PURPOSE);
                     smsForgotSessionClear();
-                    $error = 'Code expired (2 minutes). Request a new code.';
+                    $error = 'Code expired (' . SMS_FORGOT_OTP_TTL_MIN . ' minutes). Request a new code.';
                     $step = 'email';
                     $emailValue = $session['email'];
                 } else {
@@ -790,7 +790,7 @@ html[data-theme="dark"] .forgot-glass .sms-cf-widget.is-verified {
 
         <?php if ($step === 'email'): ?>
             <h1>Forgot password</h1>
-            <p class="forgot-lead">Enter the email linked to your BCP account. We will send a 6-digit code (valid for 2 minutes).</p>
+            <p class="forgot-lead">Enter the email linked to your BCP account. We will send a 6-digit code (valid for <?= (int) SMS_FORGOT_OTP_TTL_MIN ?> minutes).</p>
         <?php elseif ($step === 'otp'): ?>
             <h1>Enter code</h1>
             <p class="forgot-lead">We sent a code to <strong><?= e($emailValue) ?></strong>. Enter it below before it expires.</p>

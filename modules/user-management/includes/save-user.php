@@ -434,6 +434,30 @@ function rcSyncAssignmentFromUserAccount(int $userId, string $role, string $full
 }
 
 try {
+    if ($action === 'bulk_set_status') {
+        $ids = array_values(array_unique(array_filter(
+            array_map('intval', is_array($data['user_ids'] ?? null) ? $data['user_ids'] : []),
+            static fn(int $v): bool => $v > 0
+        )));
+        $bulkStatus = trim((string) ($data['status'] ?? ''));
+        if ($ids === [] || !in_array($bulkStatus, ['active', 'inactive', 'suspended'], true)) {
+            throw new InvalidArgumentException('Select at least one account and a valid status.');
+        }
+        if (count($ids) > 200) {
+            throw new InvalidArgumentException('Too many accounts in one request (maximum 200).');
+        }
+        if (in_array(getCurrentUserId(), $ids, true) && $bulkStatus !== 'active') {
+            throw new InvalidArgumentException('You cannot archive your own account');
+        }
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $bulkStmt = $pdo->prepare("UPDATE `sms2_users` SET status = ? WHERE id IN ({$placeholders})");
+        $bulkStmt->execute(array_merge([$bulkStatus], $ids));
+        $updated = $bulkStmt->rowCount();
+        $verb = $bulkStatus === 'active' ? 'Restored' : 'Archived';
+        logActivity('update', $verb . ' ' . count($ids) . ' account(s) in bulk (status=' . $bulkStatus . ')', 'user-management');
+        umEmit(['ok' => true, 'status' => $bulkStatus, 'requested' => count($ids), 'updated' => $updated]);
+    }
+
     if ($action === 'set_status') {
         $id = (int) ($data['user_id'] ?? 0);
         $status = trim((string) ($data['status'] ?? ''));
