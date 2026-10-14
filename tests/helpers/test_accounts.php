@@ -67,7 +67,7 @@ function smsTestDeleteUser(string $username): void
         return;
     }
     $pdo = db();
-    foreach (['sms2_user_authenticators', 'sms2_security_otps', 'sms2_password_resets', 'sms2_user_passkeys'] as $table) {
+    foreach (['sms2_student_profiles', 'sms2_user_authenticators', 'sms2_security_otps', 'sms2_password_resets', 'sms2_user_passkeys'] as $table) {
         try {
             $pdo->prepare("DELETE FROM `{$table}` WHERE user_id = ?")->execute([$uid]);
         } catch (Throwable $e) {

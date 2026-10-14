@@ -324,6 +324,11 @@ $progressState = 'locked';
 $progressStateLabel = 'Locked';
 $progressDetail = 'Research development becomes available after your group is officially registered.';
 $progressResponsible = 'Waiting for registration';
+if ($titleFullyApproved && !$researchGroup) {
+    $progressStateLabel = 'Waiting for official registration';
+    $progressDetail = 'Your title is fully approved. Ask CRAD to generate your official RG number on the Research Group Number page and complete your Capstone Group/Student Registry details to unlock Document Submission.';
+    $progressResponsible = 'CRAD Office';
+}
 if ($researchGroup) {
     if (!$researchPlan) {
         $progressState = 'current';

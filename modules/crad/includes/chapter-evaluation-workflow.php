@@ -102,6 +102,15 @@ function chapterRegisteredStudentGroup(PDO $crad): ?array
               AND (
                     ca2.research_group_id = rg.id
                  OR (ca2.research_group_id IS NULL AND ca2.group_number = rg.group_number)
+                 OR (TRIM(COALESCE(rg.leader_id, '')) <> ''
+                     AND ca2.student_id = rg.leader_id
+                     AND ca2.group_number LIKE 'STU-%'
+                     AND (ca2.research_group_id IS NULL OR EXISTS (
+                         SELECT 1 FROM `crad_research_groups` source_group
+                         WHERE source_group.id = ca2.research_group_id
+                           AND source_group.group_number LIKE 'STU-%'
+                           AND source_group.leader_id = rg.leader_id
+                     )))
               )
             ORDER BY ca2.updated_at DESC, ca2.id DESC
             LIMIT 1
@@ -112,6 +121,15 @@ function chapterRegisteredStudentGroup(PDO $crad): ?array
             WHERE (
                     aa2.research_group_id = rg.id
                  OR (aa2.research_group_id IS NULL AND aa2.group_number = rg.group_number)
+                 OR (TRIM(COALESCE(rg.leader_id, '')) <> ''
+                     AND aa2.student_id = rg.leader_id
+                     AND aa2.group_number LIKE 'STU-%'
+                     AND (aa2.research_group_id IS NULL OR EXISTS (
+                         SELECT 1 FROM `crad_research_groups` source_group
+                         WHERE source_group.id = aa2.research_group_id
+                           AND source_group.group_number LIKE 'STU-%'
+                           AND source_group.leader_id = rg.leader_id
+                     )))
               )
             ORDER BY (aa2.assignment_status = 'Assigned') DESC, aa2.updated_at DESC, aa2.id DESC
             LIMIT 1
@@ -174,7 +192,7 @@ function chapterRegisteredStudentGroup(PDO $crad): ?array
 
 function chapterSubmissionUnavailableMessage(): string
 {
-    return 'Document Submission is not yet available. Your research group must be officially registered.';
+    return 'Document Submission is not yet available. After all title approvals are signed, CRAD must generate your official RG number in Research Group Number and complete your group registration.';
 }
 
 function chapterRenderUnavailableNotice(): void
@@ -182,7 +200,7 @@ function chapterRenderUnavailableNotice(): void
     echo '<div class="alert alert-info">'
         . smsIcon('info-circle', ['class' => 'me-2'])
         . '<strong>Document Submission is not yet available.</strong><br>'
-        . 'Your research group must be officially listed in the Capstone Group/Student Registry before you can submit Chapter 1-3. Please ensure your approved research title, group members, adviser, coordinator, program, and academic year are complete.'
+        . 'After all title approvals are signed, ask CRAD to generate your official RG number on the Research Group Number page. Your group must then be listed in the Capstone Group/Student Registry with its approved title, members, adviser, coordinator, program, and academic year before you can submit Chapter 1-3.'
         . '</div>';
 }
 

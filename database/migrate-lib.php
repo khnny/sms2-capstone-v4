@@ -39,7 +39,7 @@ function sms2MigrateSqlCreateTables(string $sqlFile): array
         return [];
     }
 
-    preg_match_all('/CREATE\s+TABLE\s+`([^`]+)`/i', (string) file_get_contents($sqlFile), $matches);
+    preg_match_all('/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/i', (string) file_get_contents($sqlFile), $matches);
 
     return array_values(array_unique($matches[1] ?? []));
 }
@@ -140,12 +140,84 @@ function sms2MigrateApplySqlFile(PDO $pdo, string $sqlFile): int
     $statements = sms2MigrateSplitSql($sql);
     $applied = 0;
 
-    foreach ($statements as $statement) {
-        $pdo->exec($statement);
-        $applied++;
+    try {
+        foreach ($statements as $index => $statement) {
+            try {
+                $pdo->exec($statement);
+            } catch (PDOException $e) {
+                // Driver messages can contain seeded account values. Report codes only.
+                throw new RuntimeException(
+                    basename($sqlFile) . ' statement ' . ($index + 1)
+                    . ' failed (SQLSTATE ' . ($e->errorInfo[0] ?? $e->getCode())
+                    . ', MySQL ' . ($e->errorInfo[1] ?? 'unknown') . ').'
+                );
+            }
+            $applied++;
+        }
+    } finally {
+        // Dumps temporarily disable FK checks while creating dependent account tables.
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
     }
 
     return $applied;
+}
+
+/** Required columns and ordered indexes are read from the canonical fresh schema. */
+function sms2MigrateSchemaContract(string $sqlFile): array
+{
+    $sql = file_get_contents($sqlFile);
+    if ($sql === false) throw new RuntimeException('Schema file is not readable: ' . basename($sqlFile));
+    preg_match_all('/CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`\s*\((.*?)\)\s*ENGINE/is', $sql, $tables, PREG_SET_ORDER);
+    $contract = [];
+    foreach ($tables as $table) {
+        preg_match_all('/^\s*`([^`]+)`\s+/m', $table[2], $columns);
+        $indexes = [];
+        preg_match_all('/^\s*(PRIMARY KEY|(?:UNIQUE )?KEY `[^`]+`)\s*\(([^\n]+)\)/m', $table[2], $keys, PREG_SET_ORDER);
+        foreach ($keys as $key) {
+            $name = 'PRIMARY';
+            if ($key[1] !== 'PRIMARY KEY') {
+                preg_match('/`([^`]+)`/', $key[1], $match);
+                $name = $match[1];
+            }
+            preg_match_all('/`([^`]+)`(?:\((\d+)\))?/', $key[2], $parts, PREG_SET_ORDER);
+            $indexes[$name] = [
+                'unique' => $name === 'PRIMARY' || str_starts_with($key[1], 'UNIQUE'),
+                'parts' => array_map(static fn(array $part): array => [$part[1], isset($part[2]) ? (int) $part[2] : null], $parts),
+            ];
+        }
+        $contract[$table[1]] = ['columns' => $columns[1], 'indexes' => $indexes];
+    }
+    if (!$contract) throw new RuntimeException('No schema definitions found: ' . basename($sqlFile));
+    return $contract;
+}
+
+function sms2MigrateValidateSchema(PDO $pdo, string $sqlFile): void
+{
+    $columns = [];
+    foreach ($pdo->query('SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $columns[$row['TABLE_NAME']][] = $row['COLUMN_NAME'];
+    }
+    $indexes = [];
+    foreach ($pdo->query('SELECT TABLE_NAME, INDEX_NAME, NON_UNIQUE, COLUMN_NAME, SUB_PART FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() ORDER BY TABLE_NAME, INDEX_NAME, SEQ_IN_INDEX')->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $index = &$indexes[$row['TABLE_NAME']][$row['INDEX_NAME']];
+        $index['unique'] = (int) $row['NON_UNIQUE'] === 0;
+        $index['parts'][] = [$row['COLUMN_NAME'], $row['SUB_PART'] === null ? null : (int) $row['SUB_PART']];
+        unset($index);
+    }
+    $errors = [];
+    foreach (sms2MigrateSchemaContract($sqlFile) as $table => $required) {
+        if (!isset($columns[$table])) {
+            $errors[] = 'missing table ' . $table;
+            continue;
+        }
+        foreach (array_diff($required['columns'], $columns[$table]) as $column) $errors[] = 'missing column ' . $table . '.' . $column;
+        foreach ($required['indexes'] as $name => $expected) {
+            if (($indexes[$table][$name] ?? null) !== $expected) $errors[] = 'missing or incompatible index ' . $table . '.' . $name;
+        }
+    }
+    if ($errors) {
+        throw new RuntimeException('Schema validation failed for ' . basename($sqlFile) . ': ' . implode('; ', array_slice($errors, 0, 15)) . '. Repair with a data-preserving schema upgrade; do not re-import seeded dumps over existing accounts.');
+    }
 }
 
 function sms2MigrateEnsureTrackingTable(PDO $pdo): void
@@ -214,23 +286,20 @@ function sms2MigrateOneDatabase(array $target, array $options, ?callable $sink =
         $target['charset']
     );
 
-    if ($options['fresh']) {
-        sms2MigrateOut('Dropping existing database because --fresh was provided...', $sink);
-        $pdo->exec('DROP DATABASE IF EXISTS ' . $quotedDatabase);
-    }
-
     sms2MigrateEnsureDatabase($pdo, $database, $sink);
     $pdo->exec('USE ' . $quotedDatabase);
 
     if (!$options['fresh'] && !$options['force']) {
         if (sms2MigrateWasRecorded($pdo, $target['migration_key'])) {
-            sms2MigrateOut('Skipped: migration was already recorded. Use --force to re-apply.', $sink);
+            sms2MigrateValidateSchema($pdo, $target['sql_file']);
+            sms2MigrateOut('Skipped: recorded migration schema validated.', $sink);
             return;
         }
 
         $targetTables = sms2MigrateSqlCreateTables($target['sql_file']);
         $existingTargetTables = sms2MigrateExistingTargetTableCount($pdo, $targetTables);
         if ($targetTables && $existingTargetTables === count($targetTables)) {
+            sms2MigrateValidateSchema($pdo, $target['sql_file']);
             sms2MigrateRecord($pdo, $target['migration_key'], $target['sql_file']);
             sms2MigrateOut('Skipped: target tables already exist; recorded this migration as applied.', $sink);
             return;
@@ -239,12 +308,13 @@ function sms2MigrateOneDatabase(array $target, array $options, ?callable $sink =
         if ($existingTargetTables > 0) {
             throw new RuntimeException(
                 'Partial schema detected for ' . $label .
-                '. Use --fresh to rebuild, or fix the existing tables before migrating.'
+                '. Restore or repair the schema before retrying; do not re-import seeded dumps over existing accounts.'
             );
         }
     }
 
     $applied = sms2MigrateApplySqlFile($pdo, $target['sql_file']);
+    sms2MigrateValidateSchema($pdo, $target['sql_file']);
     sms2MigrateRecord($pdo, $target['migration_key'], $target['sql_file']);
 
     sms2MigrateOut('Applied ' . $applied . ' SQL statement(s).', $sink);
@@ -334,6 +404,13 @@ function sms2RunMigrations(array $options = []): array
     }
 
     sms2MigrateOut('SMS 2 deployment migration started.', $sink);
+    if ($options['fresh']) {
+        // Both target files share DB_NAME: resetting inside the loop erases SMS2
+        // immediately before CRAD is imported.
+        $server = sms2MigrateConnectServer(DB_HOST, DB_PORT, DB_USER, DB_PASS, DB_CHARSET);
+        $server->exec('DROP DATABASE IF EXISTS ' . sms2MigrateQuoteIdentifier(DB_NAME));
+        sms2MigrateOut('Shared database reset once because --fresh was provided.', $sink);
+    }
     foreach ($targets as $target) {
         sms2MigrateOneDatabase($target, $options, $sink);
     }

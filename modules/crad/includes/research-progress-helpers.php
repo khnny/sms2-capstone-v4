@@ -946,6 +946,15 @@ function rpGetRegisteredResearchGroup(PDO $crad, string $studentId, int $student
               AND  (
                     ca2.research_group_id = rg.id
                  OR (ca2.research_group_id IS NULL AND ca2.group_number = rg.group_number)
+                 OR (TRIM(COALESCE(rg.leader_id, '')) <> ''
+                     AND ca2.student_id = rg.leader_id
+                     AND ca2.group_number LIKE 'STU-%'
+                     AND (ca2.research_group_id IS NULL OR EXISTS (
+                         SELECT 1 FROM `crad_research_groups` source_group
+                         WHERE source_group.id = ca2.research_group_id
+                           AND source_group.group_number LIKE 'STU-%'
+                           AND source_group.leader_id = rg.leader_id
+                     )))
               )
             ORDER BY ca2.updated_at DESC, ca2.id DESC
             LIMIT 1
@@ -958,6 +967,15 @@ function rpGetRegisteredResearchGroup(PDO $crad, string $studentId, int $student
             WHERE  (
                     aa2.research_group_id = rg.id
                  OR (aa2.research_group_id IS NULL AND aa2.group_number = rg.group_number)
+                 OR (TRIM(COALESCE(rg.leader_id, '')) <> ''
+                     AND aa2.student_id = rg.leader_id
+                     AND aa2.group_number LIKE 'STU-%'
+                     AND (aa2.research_group_id IS NULL OR EXISTS (
+                         SELECT 1 FROM `crad_research_groups` source_group
+                         WHERE source_group.id = aa2.research_group_id
+                           AND source_group.group_number LIKE 'STU-%'
+                           AND source_group.leader_id = rg.leader_id
+                     )))
               )
             ORDER BY (aa2.assignment_status = 'Confirmed') DESC,
                      (aa2.assignment_status = 'Assigned')  DESC,

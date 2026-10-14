@@ -3,11 +3,10 @@ SMS 2 – Database & Security Adoption
 
 1. Start Apache + MySQL (XAMPP)
 2. Copy the project folder into htdocs. Any folder name is OK.
-3. Install schema (once), from the project folder:
-     C:\xampp\php\php.exe database\install.php
-4. Open setup and create YOUR Super Admin (no demo accounts):
-     http://localhost/<your-folder-name>/setup/
-5. After setup, add staff/student users in User Management.
+3. Install both schemas into an EMPTY database, from the project folder:
+     C:\xampp\php\php.exe database\migrate.php
+4. Sign in using an existing administrator account from the SMS2 dump.
+5. Manage additional staff/student users in User Management.
 
 If the other computer has a MySQL password or different database names, copy:
      config\local.example.php
@@ -15,11 +14,32 @@ to:
      config\local.php
 then edit the values there.
 
-What install creates:
-  - roles, role_permissions, system_settings, empty users table
+What these deployment dumps contain:
+  - SMS2 schema plus the existing 24 users, 4 student profiles, roles,
+    permissions and system settings. User IDs and password hashes are preserved.
+  - Complete CRAD schema, including panel applications, reschedule history,
+    stage-scoped members and reminders, without CRAD demo records.
+  - Empty OTP, password-reset and login-throttle tables.
+  - Existing authenticator/passkey records, if present in the source export.
 
-What install does NOT create:
-  - demo logins / sample users
+Source data limitation: two of the four profiles already reference user IDs
+absent from the source users table. They are retained unchanged; no account
+is invented or silently reassigned. Review these links separately.
+
+Manual phpMyAdmin / webhosting import (no CLI needed):
+  1. Select the hosting-provided EMPTY database.
+  2. Import database/sms2_db.sql.
+  3. Into the SAME database, import modules/crad/database/crad_db.sql.
+  4. Configure SMS2 and CRAD to use that same database, then sign in.
+Do not import the root sms2_db (1).sql snapshot instead. Do not run the old
+database/install.php role-seeding installer after importing these account seeds.
+Do not re-import these fresh-install dumps over existing hosted accounts/data.
+If a prior import failed, preserve any needed data and use an empty database
+for the corrected import; failed DDL is not transactionally rolled back.
+
+Keep the original SMS2_APP_KEY when moving encrypted authenticator secrets.
+Do not put app keys or SMTP passwords in a public SQL export. Passkeys may
+need re-enrollment when the hosting domain changes; do not reset passwords.
 
 Deployment migration
 --------------------
@@ -51,7 +71,7 @@ records the applied dump hashes in schema_migrations. If CRAD_DB_NAME is not
 set, the CRAD tables are installed into the same HostForge database as SMS2.
 
 Useful options:
-  - --fresh  Drop and rebuild both databases. DESTROYS DATA.
+  - --fresh  Drop and rebuild the shared database ONCE. DESTROYS DATA.
   - --force  Apply SQL even when tables already exist.
 
 Docker startup option:
@@ -69,7 +89,7 @@ InfinityFree has no SSH, so use the web deploy helper instead of CLI migrate.
 5. Replace .htaccess with .htaccess.infinityfree if the site shows HTTP 500
    (InfinityFree often blocks php_value in .htaccess).
 6. Open: https://YOUR-SITE.infinityfreeapp.com/setup/deploy-db.php?token=YOUR_TOKEN
-7. Open: https://YOUR-SITE.infinityfreeapp.com/setup/ and create the Super Admin.
+7. Sign in with the existing administrator account preserved in the SMS2 dump.
 8. Remove SMS2_DEPLOY_TOKEN from config/local.php after migration succeeds.
 
 HostForge / single-DB cutover

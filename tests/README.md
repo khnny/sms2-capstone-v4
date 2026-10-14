@@ -10,6 +10,17 @@ These tests run against a local test database. They create and delete their own 
 
 ## PHP tests (no web server needed)
 
+    php tests/deployment_migration_test.php
+
+The deployment test creates and removes only its own `crad_qa_migration_*`
+databases. It verifies standalone/combined imports, all preserved account records,
+empty CRAD tables, required indexes/columns, repeat migrations and one shared
+reset with `--fresh`. Configure `SMS2_MIGRATION_TEST_HOST`, `_PORT`, `_USER`,
+and `_PASSWORD` for an isolated MySQL/MariaDB server; the user needs CREATE/DROP
+DATABASE permissions for the disposable fixtures. It preserves the source's two
+pre-existing orphan student-profile links and reports that limitation explicitly.
+Account-preservation fixtures contain only aggregate fingerprints and counts.
+
     php tests/p0_app_key_test.php        P0: Authenticator survives a password change
     php tests/otp_ttl_test.php           P2: OTP expires after 5 minutes
 
