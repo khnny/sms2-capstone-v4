@@ -118,7 +118,7 @@ function cradRecordDefenseSchedule(PDO $pdo, string $groupNumber, string $propos
             ) AS adviser_name,
             '' AS panel_members
          FROM `crad_research_groups` g
-         JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+         LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
          WHERE (:group_gate <> '' AND g.group_number = :group_match)
             OR (
                 :proposal_gate <> ''
@@ -214,7 +214,7 @@ function cradOfficialAssignmentRecords(PDO $pdo): array
                       AND (a.research_group_id = g.id OR a.group_number = g.group_number OR a.proposal_id = g.proposal_id)
                 ), '1000-01-01 00:00:00') AS updated_at
              FROM `crad_research_groups` g
-             JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+             LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
              LEFT JOIN `crad_research_defense_schedules` rds ON rds.group_number = g.group_number
              WHERE EXISTS (
                 SELECT 1
