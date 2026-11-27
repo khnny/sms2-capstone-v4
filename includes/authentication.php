@@ -945,6 +945,11 @@ function smsReviewCommitteeGrantModule(): array
 
 function smsPostLoginRedirectUrl(): string
 {
+    // Integrated app sign-in in progress (see login/sso-authorize.php): finish it first.
+    if (!empty($_SESSION['sso_pending']) && is_array($_SESSION['sso_pending'])) {
+        return BASE_URL . '/login/sso-authorize.php';
+    }
+
     require_once __DIR__ . '/navigation-context.php';
 
     return smsRoleHomeUrl(getCurrentUserRoleKey());
