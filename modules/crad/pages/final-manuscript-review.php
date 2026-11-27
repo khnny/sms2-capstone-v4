@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $crad,
                                 $submission,
                                 'Final Manuscript Approved — Research 2 Open',
-                                'Your final manuscript was approved. Upload Research 2 collage payment, then complete Research 2 clearance after Admin approves it. Final Defense can be scheduled once Research 2 clearance is done.',
+                                'Your final manuscript was approved. Upload Research 2 college payment, then complete Research 2 clearance after Admin approves it. Final Defense can be scheduled once Research 2 clearance is done.',
                                 BASE_URL . '/modules/student-portal/pages/college-payment.php?stage=research_2'
                             );
                         }

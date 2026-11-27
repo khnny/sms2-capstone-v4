@@ -1006,7 +1006,7 @@ function rscStudentUploadSigned(PDO $crad, array $clearance, array $file = []): 
         return ['ok' => false, 'error' => 'This clearance cannot accept an upload right now.'];
     }
     if (!rscPaymentUnlocksClearance($crad, (int) ($clearance['research_group_id'] ?? 0), $clearance)) {
-        return ['ok' => false, 'error' => 'Admin must approve the collage payment before you can upload the signed clearance.'];
+        return ['ok' => false, 'error' => 'Admin must approve the college payment before you can upload the signed clearance.'];
     }
 
     $hasNewFile = $file !== [] && (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK;
@@ -2055,7 +2055,7 @@ function rscStudentInbox(PDO $crad, int $groupId): array
         } elseif ($needChapter && !$chapterOk) {
             $locked = 'Chapter 1-3 must be scored first.';
         } elseif (!$paymentOk) {
-            $locked = 'Upload and wait for Admin approval of ' . rscStageLabel($stage) . ' collage payment.';
+            $locked = 'Upload and wait for Admin approval of ' . rscStageLabel($stage) . ' college payment.';
         }
         $public['ready'] = $ready;
         $public['locked_reason'] = $locked;
