@@ -11,14 +11,14 @@ if (getCurrentUserRoleKey() !== 'student') {
     exit('Forbidden');
 }
 
-$pageTitle = 'Upload Collage Payment';
+$pageTitle = 'Upload College Payment';
 $activeModule = 'student_portal';
 $activePage = 'college-payment';
 $pageBannerIcon = 'fa-receipt';
 $pageBannerDescription = 'Upload Research 1 or Research 2 collage payment. Research 2 unlocks after Final Manuscript approval. Admin must approve payment before that clearance form opens.';
 $breadcrumbs = [
     ['label' => 'Student Portal', 'url' => BASE_URL . '/modules/student-portal/pages/dashboard.php'],
-    ['label' => 'Upload Collage Payment', 'url' => null],
+    ['label' => 'Upload College Payment', 'url' => null],
 ];
 
 $crad = rscDb();
@@ -91,7 +91,7 @@ renderBreadcrumbs($breadcrumbs);
         <section class="glass-panel p-4 mb-3" data-rcp-upload-panel <?= $canUpload || (!empty($public['has_upload']) && !$stageLocked) ? '' : 'hidden' ?>>
             <div class="row g-3 align-items-end">
                 <div class="col-md-8">
-                    <label class="form-label fw-bold" for="rcpFile">Collage payment image</label>
+                    <label class="form-label fw-bold" for="rcpFile">College payment image</label>
                     <input type="file" id="rcpFile" class="form-control" accept=".png,.jpg,.jpeg,image/png,image/jpeg" <?= $canUpload ? '' : 'disabled' ?>>
                     <div class="form-text">Upload the receipt picture. Every approved researcher's Reference / O.R. Number below is scanned automatically, or you can type it yourself.</div>
                 </div>
@@ -115,7 +115,7 @@ renderBreadcrumbs($breadcrumbs);
 
         <div class="rsc-wrap" data-rcp-preview <?= (empty($public['uploaded_url']) || $stageLocked) ? 'hidden' : '' ?>>
             <?php if (!empty($public['uploaded_url']) && !$stageLocked): ?>
-                <img class="rsc-upload-img" alt="Collage payment" src="<?= e($public['uploaded_url']) ?>">
+                <img class="rsc-upload-img" alt="College payment" src="<?= e($public['uploaded_url']) ?>">
             <?php endif; ?>
         </div>
     <?php endif; ?>
