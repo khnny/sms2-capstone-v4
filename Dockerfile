@@ -4,6 +4,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libcurl4-openssl-dev \
         libonig-dev \
+        poppler-utils \
         tesseract-ocr \
         tesseract-ocr-eng \
     && docker-php-ext-install curl mbstring mysqli pdo pdo_mysql \
