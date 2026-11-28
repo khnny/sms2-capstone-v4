@@ -334,6 +334,41 @@ function smsApiFeedback(PDO $crad, array $user): array
     return $out;
 }
 
+/**
+ * Official panel result of one defense, once every assigned panelist has
+ * submitted: FAILED beats APPROVED WITH REVISION beats APPROVED. Null while
+ * evaluations are still missing.
+ */
+function smsApiDefenseResult(PDO $crad, int $scheduleId, string $defenseType): ?string
+{
+    $isFinal = strtolower(trim($defenseType)) === 'final defense';
+    $table = $isFinal ? 'crad_final_defense_evaluations' : 'crad_preoral_defense_evaluations';
+    $phase = $isFinal ? 'Final Defense' : 'Pre-Oral Defense';
+    try {
+        $assigned = $crad->prepare(
+            "SELECT COUNT(DISTINCT panel_user_id) FROM `crad_research_panel_assignments`
+             WHERE defense_schedule_id = ? AND defense_phase = ? AND assignment_status = 'Assigned'"
+        );
+        $assigned->execute([$scheduleId, $phase]);
+        $total = (int) $assigned->fetchColumn();
+        if ($total <= 0) {
+            return null;
+        }
+        $evals = $crad->prepare("SELECT result FROM `{$table}` WHERE defense_schedule_id = ? AND status = 'Submitted'");
+        $evals->execute([$scheduleId]);
+        $results = $evals->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        if (count($results) < $total) {
+            return null;
+        }
+        if (in_array('FAILED', $results, true)) {
+            return 'FAILED';
+        }
+        return in_array('APPROVED WITH REVISION', $results, true) ? 'APPROVED WITH REVISION' : 'APPROVED';
+    } catch (Throwable $e) {
+        return null;
+    }
+}
+
 function smsApiDefenses(PDO $crad, array $user): array
 {
     $group = smsApiStudentGroup($crad, $user);
@@ -371,6 +406,7 @@ function smsApiDefenses(PDO $crad, array $user): array
             'id' => (int) $r['id'],
             'type' => $r['defense_type'],
             'status' => $r['status'],
+            'result' => smsApiDefenseResult($crad, (int) $r['id'], (string) $r['defense_type']),
             'starts_at' => smsApiIsoDate($r['defense_datetime']),
             'ends_at' => smsApiIsoDate($r['defense_end_datetime']),
             'venue' => $r['venue_name'],

@@ -595,7 +595,19 @@ function handleApproveProgress(PDO $crad, int $adviserUserId, string $adviserEma
             if ($isChapter123) {
                 // Check whether the panel has already officially approved this group.
                 $panelRecord  = rpGetGroupPanelApproval($crad, (int) $update['research_group_id']);
-                $panelApproved = ($panelRecord !== null && ($panelRecord['final_result'] ?? '') === 'APPROVED');
+                $panelResult   = (string) ($panelRecord['final_result'] ?? '');
+                $panelApproved = ($panelRecord !== null && $panelResult === 'APPROVED');
+
+                // APPROVED WITH REVISION: the panel passed the proposal on the
+                // condition that the chapters are revised. The adviser approving
+                // a chapter update submitted after that verdict clears the
+                // revision for that chapter.
+                $submittedTs = strtotime((string) ($update['submitted_at'] ?? ''));
+                $verdictTs   = strtotime((string) ($panelRecord['approved_at'] ?? ''));
+                if (!$panelApproved && $panelResult === 'APPROVED WITH REVISION'
+                    && $submittedTs !== false && $verdictTs !== false && $submittedTs >= $verdictTs) {
+                    $panelApproved = true;
+                }
 
                 if ($panelApproved) {
                     // Panel already approved → write full final state now.

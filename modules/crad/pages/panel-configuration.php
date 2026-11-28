@@ -385,6 +385,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $confirmAssignments->execute([$selectedGroupId, $selectedDefenseType]);
                 $pdo->commit();
                 $notice = 'Defense schedule confirmed. The schedule is now available to the existing CRAD defense calendar.';
+                $panelSync = cradSyncPoolPanelAssignments($pdo, $selectedGroupId);
+                if ($panelSync['missing_accounts'] !== []) {
+                    $notice .= ' Note: ' . implode(', ', $panelSync['missing_accounts'])
+                        . ' has no SMS2 account with the same email yet, so they cannot score this defense in the panel portal until one is created.';
+                }
             } catch (Throwable $e) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
