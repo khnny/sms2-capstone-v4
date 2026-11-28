@@ -137,6 +137,13 @@ if (!defined('BASE_URL')) {
     define('BASE_URL', sms2_normalize_base_url(rtrim($baseUrlCandidate, '/')));
 }
 
+// Standalone Student Portal (khnny/sms2-student-portal). When set, students who
+// open a CRAD research page here are sent to the same step in the portal instead.
+// Leave empty to keep the old in-SMS 2 student pages.
+if (!defined('STUDENT_PORTAL_URL')) {
+    define('STUDENT_PORTAL_URL', rtrim((string) sms2_env('STUDENT_PORTAL_URL', ''), '/'));
+}
+
 if (!function_exists('smsBrandLogoUrl')) {
     function smsBrandLogoUrl(): string
     {
