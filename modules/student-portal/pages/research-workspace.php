@@ -45,10 +45,13 @@ try {
 }
 
 require_once ROOT_PATH . '/includes/layout-start.php';
+if ($hubHtml !== '') {
+    $hideModulePageBanner = true; // the hub banner replaces it
+}
 renderBreadcrumbs($breadcrumbs);
 ?>
 <link href="<?= BASE_URL ?>/assets/css/research-statement.css?v=2" rel="stylesheet">
-<link href="<?= BASE_URL ?>/assets/css/research-hub.css?v=1" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/research-hub.css?v=2" rel="stylesheet">
 
 <?php if ($hubError !== ''): ?>
     <div class="alert alert-warning" role="alert"><?= htmlspecialchars($hubError, ENT_QUOTES, 'UTF-8') ?></div>
@@ -56,5 +59,5 @@ renderBreadcrumbs($breadcrumbs);
     <?= $hubHtml ?>
 <?php endif; ?>
 
-<script src="<?= BASE_URL ?>/assets/js/research-hub.js?v=1" defer></script>
+<script src="<?= BASE_URL ?>/assets/js/research-hub.js?v=2" defer></script>
 <?php require_once ROOT_PATH . '/includes/layout-end.php'; ?>

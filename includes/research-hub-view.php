@@ -48,6 +48,27 @@ function smsHubWords(string $value): string
     return $value;
 }
 
+/** Icon class for a generic icon name; the Student Portal sets SMS_HUB_ICON_SET to 'fa'. */
+function smsHubIconClass(string $name): string
+{
+    $fa = ['checks' => 'fa-check-double', 'flag' => 'fa-flag', 'presentation' => 'fa-person-chalkboard', 'user-check' => 'fa-user-check',
+        'users' => 'fa-users', 'signature' => 'fa-file-signature', 'hash' => 'fa-hashtag', 'file-text' => 'fa-file-lines',
+        'chart-line' => 'fa-chart-line', 'book' => 'fa-book', 'clipboard-check' => 'fa-clipboard-check', 'lock' => 'fa-lock'];
+    if (defined('SMS_HUB_ICON_SET') && SMS_HUB_ICON_SET === 'fa') {
+        return 'fa-solid ' . ($fa[$name] ?? 'fa-circle');
+    }
+    return 'ti ti-' . $name;
+}
+
+/** Icon name for each CRAD step. */
+function smsHubStepIcon(array $step): string
+{
+    return [
+        'group' => 'users', 'assignment' => 'user-check', 'title' => 'signature', 'registry' => 'hash', 'chapters' => 'file-text',
+        'progress' => 'chart-line', 'defense' => 'presentation', 'manuscript' => 'book', 'clearance' => 'clipboard-check',
+    ][$step['key']] ?? 'flag';
+}
+
 function smsHubStateLabel(string $hubState): string
 {
     return ['done' => 'Done', 'ongoing' => 'Ongoing', 'action' => 'Needs action', 'locked' => 'Locked'][$hubState] ?? 'Ongoing';
@@ -183,6 +204,28 @@ function smsRenderResearchHub(array $st, string $baseUrl, ?callable $actionHref 
         !empty($s['adviser']) ? 'Adviser: ' . $s['adviser'] : '',
         !empty($student['school_year']) ? 'AY ' . $student['school_year'] : '',
     ]);
+    $nameParts = preg_split('/\s+/', trim((string) ($student['name'] ?? ''))) ?: [];
+    $firstName = $nameParts[0] ?? 'there';
+    if (str_contains((string) ($student['name'] ?? ''), ',')) {
+        $afterComma = trim(explode(',', (string) $student['name'], 2)[1]);
+        $firstName = (preg_split('/\s+/', $afterComma) ?: [$firstName])[0] ?: $firstName;
+    }
+    $nextDefense = 'Not scheduled';
+    foreach ($steps as $st2) {
+        if ($st2['key'] === 'defense' && !empty($st2['list']['rows'])) {
+            $di = smsHubCol($st2['list'], 'Date and time');
+            if ($di >= 0 && trim((string) $st2['list']['rows'][0][$di]) !== '') {
+                $nextDefense = (string) $st2['list']['rows'][0][$di];
+            }
+        }
+    }
+    $current = $next ? smsHubTitle($next) : 'Complete';
+    $kpis = [
+        ['checks', 'Steps done', (int) $s['steps_done'] . ' of ' . (int) $s['steps_total'], '#22c55e'],
+        ['flag', 'Current step', $current, '#3b82f6'],
+        ['presentation', 'Next defense', $nextDefense, '#a855f7'],
+        ['user-check', 'Adviser', ($s['adviser'] ?? '') !== '' ? $s['adviser'] : 'For assignment', '#f59e0b'],
+    ];
     $actionAttrs = static function (array $step) use ($baseUrl, $actionHref): string {
         if (empty($step['action']) || $step['state'] === 'locked') {
             return '';
@@ -196,38 +239,48 @@ function smsRenderResearchHub(array $st, string $baseUrl, ?callable $actionHref 
     ob_start();
     ?>
 <div class="rh" id="researchHub">
-    <div class="rh-hero">
-        <section class="rh-panel rh-overview">
-            <div class="rh-eyebrow">CRAD Research Hub</div>
-            <h1 class="rh-h1">Your research, all in one page</h1>
-            <div class="rh-title"><?= smsRsEsc(($s['research_title'] ?? '') !== '' ? $s['research_title'] : 'No research title yet') ?></div>
-            <?php if ($tags): ?>
-                <div class="rh-tags"><?php foreach ($tags as $t): ?><span><?= smsRsEsc($t) ?></span><?php endforeach; ?></div>
-            <?php endif; ?>
-            <div class="rh-prog">
-                <div class="rh-prog-row"><span><?= (int) $s['steps_done'] ?> of <?= (int) $s['steps_total'] ?> steps done</span><span><?= $progress ?>% overall</span></div>
-                <div class="rh-track"><div class="rh-fill" style="width:<?= max(0, min(100, $progress)) ?>%"></div></div>
-            </div>
-        </section>
-        <?php if ($next): $ns = smsHubState($next['state']); ?>
-            <section class="rh-panel rh-next rh-<?= $ns ?>">
-                <div class="rh-next-k"><?= $ns === 'action' ? 'Needs your action' : ($next['state'] === 'waiting' ? 'Waiting on CRAD or your adviser' : 'Your next step') ?></div>
-                <h2><?= smsRsEsc(smsHubTitle($next)) ?></h2>
-                <p><?= smsRsEsc(str_ends_with((string) ($s['next_text'] ?? ''), 'this is your next step.') || empty($s['next_text']) ? $next['summary'] : $s['next_text']) ?></p>
-                <?php if (!empty($next['action'])): ?>
-                    <button type="button" class="rh-btn rh-btn--solid"<?= $actionAttrs($next) ?>><?= smsRsEsc($next['action']['label']) ?></button>
-                <?php else: ?>
-                    <button type="button" class="rh-btn" data-rh-open="details" data-rh-step="<?= smsRsEsc($next['key']) ?>">See details</button>
+    <section class="rh-hero2">
+        <img class="rh-wm" src="<?= smsRsEsc($baseUrl . '/images/bcp-crest.png') ?>" alt="" onerror="this.remove()">
+        <div class="rh-hero-main">
+            <div class="rh-hero-text">
+                <div class="rh-date"><?= smsRsEsc((new DateTimeImmutable('now', new DateTimeZone('Asia/Manila')))->format('l, M j, Y')) ?> · CRAD Research Hub</div>
+                <h1>Hi, <?= smsRsEsc($firstName) ?>! 👋</h1>
+                <p class="rh-hero-title"><?= smsRsEsc(($s['research_title'] ?? '') !== '' ? $s['research_title'] : 'No research title yet') ?></p>
+                <?php if ($tags): ?>
+                    <div class="rh-tags2"><?php foreach ($tags as $t): ?><span><?= smsRsEsc($t) ?></span><?php endforeach; ?></div>
                 <?php endif; ?>
-            </section>
-        <?php else: ?>
-            <section class="rh-panel rh-next rh-done">
-                <div class="rh-next-k">All done</div>
-                <h2>Every CRAD step is complete</h2>
-                <p>Congratulations. Your research has finished the CRAD process.</p>
-            </section>
-        <?php endif; ?>
-    </div>
+            </div>
+            <div class="rh-big-ring" style="--p:<?= max(0, min(100, $progress)) ?>" role="img" aria-label="<?= $progress ?>% overall progress"><div><b><?= $progress ?>%</b><span>overall</span></div></div>
+        </div>
+        <div class="rh-hero-grid">
+            <div class="rh-kpis2">
+                <?php foreach ($kpis as $k): ?>
+                    <div class="rh-kpi2" style="--c:<?= smsRsEsc($k[3]) ?>">
+                        <div class="rh-kpi2-ic"><i class="<?= smsRsEsc(smsHubIconClass($k[0])) ?>" aria-hidden="true"></i></div>
+                        <div><span><?= smsRsEsc($k[1]) ?></span><b><?= smsRsEsc($k[2]) ?></b></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php if ($next): $ns = smsHubState($next['state']); ?>
+                <div class="rh-next2 rh-<?= $ns ?>">
+                    <div class="rh-next-k"><?= $ns === 'action' ? 'Needs your action' : ($next['state'] === 'waiting' ? 'Waiting on CRAD or your adviser' : 'Your next step') ?></div>
+                    <h2><?= smsRsEsc(smsHubTitle($next)) ?></h2>
+                    <p><?= smsRsEsc(str_ends_with((string) ($s['next_text'] ?? ''), 'this is your next step.') || empty($s['next_text']) ? $next['summary'] : $s['next_text']) ?></p>
+                    <?php if (!empty($next['action'])): ?>
+                        <button type="button" class="rh-btn rh-btn--solid"<?= $actionAttrs($next) ?>><?= smsRsEsc($next['action']['label']) ?> →</button>
+                    <?php else: ?>
+                        <button type="button" class="rh-btn" data-rh-open="details" data-rh-step="<?= smsRsEsc($next['key']) ?>">See details</button>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <div class="rh-next2 rh-done">
+                    <div class="rh-next-k">All done</div>
+                    <h2>Every CRAD step is complete 🎉</h2>
+                    <p>Congratulations. Your research has finished the CRAD process.</p>
+                </div>
+            <?php endif; ?>
+        </div>
+    </section>
 
     <div class="rh-legend">
         <h2>CRAD process</h2>
@@ -247,8 +300,8 @@ function smsRenderResearchHub(array $st, string $baseUrl, ?callable $actionHref 
         ?>
         <article class="rh-card rh-<?= $hs ?><?= $wide ? ' rh-wide' : '' ?><?= $isNext ? ' rh-is-next' : '' ?>" id="rh-step-<?= smsRsEsc($step['key']) ?>">
             <header class="rh-card-head">
-                <span class="rh-no"><?= $hs === 'done' ? '✓' : (int) $step['no'] ?></span>
-                <h3><?= smsRsEsc(smsHubTitle($step)) ?></h3>
+                <span class="rh-step-ic"><i class="<?= smsRsEsc(smsHubIconClass($hs === 'locked' ? 'lock' : smsHubStepIcon($step))) ?>" aria-hidden="true"></i></span>
+                <h3><small>Step <?= (int) $step['no'] ?></small><?= smsRsEsc(smsHubTitle($step)) ?></h3>
                 <span class="rh-pill" title="<?= smsRsEsc(smsHubStateLabel($hs)) ?>"><?= smsRsEsc(smsHubWords((string) $step['status'])) ?></span>
             </header>
             <?php if ($hs === 'locked'): ?>
