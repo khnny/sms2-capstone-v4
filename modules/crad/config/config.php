@@ -1042,3 +1042,146 @@ function cradEnsurePanelAvailabilityWindows(?PDO $pdo): void
         error_log('Panel availability schema check failed: ' . $e->getMessage());
     }
 }
+
+/**
+ * SQL condition that matches a pre-oral defense schedule. Panel Configuration
+ * labels this stage "Proposal Defense"; older pages store "Pre-Oral".
+ */
+function cradPreOralDefenseTypeSql(string $column = 'defense_type'): string
+{
+    return "LOWER(TRIM(COALESCE({$column}, ''))) IN ('pre-oral', 'pre-oral defense', 'proposal defense')";
+}
+
+/**
+ * Map a Panel Configuration defense type to the panel-assignment phase used
+ * by the panel portal and research progress logic. Null = no evaluation phase.
+ */
+function cradDefensePhaseForType(string $defenseType): ?string
+{
+    $type = strtolower(trim($defenseType));
+    if (in_array($type, ['pre-oral', 'pre-oral defense', 'proposal defense'], true)) {
+        return CRAD_DEFENSE_PHASE_PRE_ORAL;
+    }
+    if ($type === 'final defense' || $type === 'final') {
+        return CRAD_DEFENSE_PHASE_FINAL;
+    }
+    return null;
+}
+
+/**
+ * Copy confirmed pool panelists (Panel Configuration) into
+ * crad_research_panel_assignments so the panel portal, evaluations and
+ * milestone approval see them. Pool panelists are matched to SMS2 accounts by
+ * email. Safe to call repeatedly.
+ *
+ * @return array{synced:int, missing_accounts:string[]}
+ */
+function cradSyncPoolPanelAssignments(PDO $pdo, ?int $groupId = null): array
+{
+    $result = ['synced' => 0, 'missing_accounts' => []];
+    try {
+        $sql = "SELECT pa.research_group_id, pa.defense_type, pa.panel_role,
+                       pp.applicant_name, pp.applicant_email, pp.primary_specialization,
+                       pa.assigned_by, pa.assigned_at,
+                       u.id AS user_id, u.full_name,
+                       rds.id AS schedule_id, rds.proposal_id, rds.proposal_number,
+                       rds.group_number, rds.research_title
+                FROM crad_panel_pool_assignments pa
+                JOIN crad_panelist_pool pp ON pp.id = pa.pool_id
+                JOIN crad_research_defense_schedules rds
+                  ON rds.id = (
+                        SELECT s.id FROM crad_research_defense_schedules s
+                        WHERE s.research_group_id = pa.research_group_id
+                          AND s.defense_type = pa.defense_type
+                        ORDER BY s.id DESC LIMIT 1
+                  )
+                LEFT JOIN sms2_users u ON LOWER(u.email) = LOWER(pp.applicant_email)
+                WHERE pa.assignment_status = 'Confirmed'";
+        $params = [];
+        if ($groupId !== null && $groupId > 0) {
+            $sql .= ' AND pa.research_group_id = ?';
+            $params[] = $groupId;
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($rows === []) {
+            return $result;
+        }
+
+        $find = $pdo->prepare(
+            "SELECT id, defense_schedule_id, assignment_status
+             FROM crad_research_panel_assignments
+             WHERE research_group_id = ? AND panel_user_id = ? AND defense_phase = ?
+             LIMIT 1"
+        );
+        $insert = $pdo->prepare(
+            "INSERT INTO crad_research_panel_assignments
+                (research_group_id, defense_schedule_id, proposal_id, proposal_number, group_number,
+                 research_title, panel_user_id, panel_name, panel_email, expertise,
+                 availability_status, assignment_status, defense_phase, assigned_by, assigned_at,
+                 created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available', 'Assigned', ?, ?, ?, NOW(), NOW())"
+        );
+        $refresh = $pdo->prepare(
+            "UPDATE crad_research_panel_assignments
+             SET defense_schedule_id = ?, assignment_status = 'Assigned', updated_at = NOW()
+             WHERE id = ?"
+        );
+        $keep = [];
+
+        foreach ($rows as $row) {
+            $phase = cradDefensePhaseForType((string) $row['defense_type']);
+            if ($phase === null) {
+                continue;
+            }
+            if (empty($row['user_id'])) {
+                $result['missing_accounts'][] = (string) $row['applicant_name'];
+                continue;
+            }
+            $find->execute([(int) $row['research_group_id'], (int) $row['user_id'], $phase]);
+            $existing = $find->fetch(PDO::FETCH_ASSOC) ?: null;
+            if ($existing === null) {
+                $insert->execute([
+                    (int) $row['research_group_id'],
+                    (int) $row['schedule_id'],
+                    $row['proposal_id'] !== null ? (int) $row['proposal_id'] : null,
+                    (string) ($row['proposal_number'] ?? ''),
+                    (string) ($row['group_number'] ?? ''),
+                    (string) ($row['research_title'] ?? ''),
+                    (int) $row['user_id'],
+                    (string) ($row['full_name'] ?: $row['applicant_name']),
+                    (string) $row['applicant_email'],
+                    (string) ($row['primary_specialization'] ?? ''),
+                    $phase,
+                    $row['assigned_by'] !== null ? (int) $row['assigned_by'] : null,
+                    $row['assigned_at'] ?: date('Y-m-d H:i:s'),
+                ]);
+            } elseif ((int) $existing['defense_schedule_id'] !== (int) $row['schedule_id']
+                || (string) $existing['assignment_status'] !== 'Assigned') {
+                $refresh->execute([(int) $row['schedule_id'], (int) $existing['id']]);
+            }
+            $result['synced']++;
+            $keep[(int) $row['research_group_id'] . '|' . $phase][] = (int) $row['user_id'];
+        }
+
+        // Panel Configuration is the source of truth once it has confirmed a
+        // panel: release panelists that were replaced there.
+        foreach ($keep as $key => $userIds) {
+            [$gid, $phase] = explode('|', $key, 2);
+            $marks = implode(',', array_fill(0, count($userIds), '?'));
+            $release = $pdo->prepare(
+                "UPDATE crad_research_panel_assignments
+                 SET assignment_status = 'Replaced'
+                 WHERE research_group_id = ? AND defense_phase = ?
+                   AND assignment_status = 'Assigned'
+                   AND panel_user_id NOT IN ({$marks})"
+            );
+            $release->execute(array_merge([(int) $gid, $phase], $userIds));
+        }
+        $result['missing_accounts'] = array_values(array_unique($result['missing_accounts']));
+    } catch (Throwable $e) {
+        error_log('Pool panel assignment sync failed: ' . $e->getMessage());
+    }
+    return $result;
+}

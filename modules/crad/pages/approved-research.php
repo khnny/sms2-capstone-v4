@@ -227,6 +227,11 @@ if (($_GET['ajax'] ?? '') === 'title-approvals') {
 if (($_GET['ajax'] ?? '') === 'title-approval-status' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json; charset=utf-8');
     $body = json_decode((string) file_get_contents('php://input'), true) ?: [];
+    if (!csrfVerify((string) ($body['csrf_token'] ?? ''))) {
+        http_response_code(403);
+        echo json_encode(['ok' => false, 'error' => 'Security check failed. Refresh the page and try again.']);
+        exit;
+    }
     echo json_encode([
         'ok' => rcTitleApprovalUpdate(
             (int) ($body['id'] ?? 0),
@@ -448,7 +453,8 @@ renderBreadcrumbs($breadcrumbs);
 
     <section class="rcar-card"
         data-rcta-endpoint="<?= rcE(BASE_URL . '/modules/crad/pages/approved-research.php?ajax=title-approvals') ?>"
-        data-rcta-update="<?= rcE(BASE_URL . '/modules/crad/pages/approved-research.php?ajax=title-approval-status') ?>">
+        data-rcta-update="<?= rcE(BASE_URL . '/modules/crad/pages/approved-research.php?ajax=title-approval-status') ?>"
+        data-rcta-csrf="<?= rcE(csrfToken()) ?>">
         <div class="rcar-record-head">
             <div>
                 <h2 class="rcar-record-title"><?= smsIcon('file-signature') ?>Title Approval for Coordinator Review <span id="rctaPending" class="rcta-badge pending"><?= (int) $titleApprovalPayload['pending'] ?></span></h2>
@@ -846,7 +852,7 @@ renderBreadcrumbs($breadcrumbs);
         return out;
     }
     async function updateStatus(id, status, remarks, sig) {
-        const res = await fetch(updateUrl, {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},credentials:'same-origin',body:JSON.stringify({id,status,remarks,coordinator_signature_data:sig || '',coordinator_screening:collectScreening()})});
+        const res = await fetch(updateUrl, {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},credentials:'same-origin',body:JSON.stringify({csrf_token:root.dataset.rctaCsrf || '',id,status,remarks,coordinator_signature_data:sig || '',coordinator_screening:collectScreening()})});
         const data = await res.json();
         if (!data.ok) { showInlineAlert('Could not update coordinator status. Please try again.'); return; }
         await refresh();

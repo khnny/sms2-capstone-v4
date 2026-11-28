@@ -360,11 +360,15 @@ function smsResearchStatement(PDO $crad, array $user): array
          WHERE research_group_id IN ($inIds) ORDER BY id DESC LIMIT 1"
     ) : null;
     $defenses = smsApiDefenses($crad, $user);
-    $defDone = count(array_filter($defenses, static fn($d) => preg_match('/complete|done|passed|finished/i', (string) $d['status'])));
+    $defDone = count(array_filter($defenses, static fn($d) => preg_match('/complete|done|passed|finished/i', (string) $d['status'])
+        || in_array($d['result'] ?? null, ['APPROVED', 'APPROVED WITH REVISION'], true)));
+    $defFailed = array_filter($defenses, static fn($d) => ($d['result'] ?? null) === 'FAILED');
     if ($s5['state'] === 'locked') {
         $s7 = ['state' => 'locked', 'status' => 'Locked'];
     } elseif ($panelReq && smsStmtBad($panelReq['status'])) {
         $s7 = ['state' => 'attention', 'status' => 'Panel application ' . strtolower((string) $panelReq['status'])];
+    } elseif ($defFailed) {
+        $s7 = ['state' => 'attention', 'status' => 'Defense failed'];
     } elseif ($defenses && $defDone === count($defenses) && $defDone > 0) {
         $s7 = ['state' => 'done', 'status' => 'Defense completed'];
     } elseif ($defenses) {
@@ -387,8 +391,8 @@ function smsResearchStatement(PDO $crad, array $user): array
             'columns' => ['Defense', 'Date and time', 'Venue', 'Panel', 'Status'],
             'rows' => array_map(static fn($d) => [
                 (string) $d['type'], smsStmtDate($d['starts_at'], true), (string) ($d['venue'] ?: 'To be announced'),
-                implode(', ', array_filter(array_merge([(string) $d['panel_chair']], array_map(static fn($p) => (string) $p['name'], $d['panel'])))),
-                (string) $d['status'],
+                implode(', ', array_unique(array_filter(array_merge([(string) $d['panel_chair']], array_map(static fn($p) => (string) $p['name'], $d['panel']))))),
+                (string) ($d['result'] ? ucwords(strtolower($d['result'])) : $d['status']),
             ], $defenses),
         ] : null,
         'remarks' => !empty($panelReq['review_remarks'])

@@ -1,4 +1,5 @@
 <?php
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file
 /**
  * SMS 2 - CRAD / custom process adapter → fleet-style real page UI
  */

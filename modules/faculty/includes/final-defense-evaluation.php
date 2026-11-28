@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file
 require_once ROOT_PATH . '/includes/authentication.php';
 require_once ROOT_PATH . '/includes/security.php';
 require_once ROOT_PATH . '/modules/crad/config/config.php';
@@ -105,6 +106,8 @@ function finalDefenseAssignedSchedule(PDO $crad, int $scheduleId): ?array
         return null;
     }
 
+    cradSyncPoolPanelAssignments($crad);
+
     $stmt = $crad->prepare(
         "SELECT rds.id, rds.research_group_id, rds.group_number, rds.research_group,
                 rds.research_title, rds.adviser_name, rds.venue,
@@ -145,6 +148,7 @@ function finalDefenseAssignedSchedule(PDO $crad, int $scheduleId): ?array
 
 function finalDefenseRows(PDO $crad, bool $history = false): array
 {
+    cradSyncPoolPanelAssignments($crad);
     $panelId = finalDefenseCurrentPanelId($crad);
     $evaluationFilter = $history ? 'fde.id IS NOT NULL' : 'fde.id IS NULL';
 

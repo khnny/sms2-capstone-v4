@@ -1967,6 +1967,7 @@ require_once ROOT_PATH . '/includes/layout-start.php';
         if (text) text.textContent = 'Sending\u2026';
 
         var payload = {
+            csrf_token:       <?= json_encode(csrfToken()) ?>,
             submission_id:    btn.dataset.submissionId || 0,
             student_id:       btn.dataset.studentId,
             student_user_id:  btn.dataset.studentUserId || null,

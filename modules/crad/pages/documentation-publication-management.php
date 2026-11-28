@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $publicationError = 'A publication record already exists for this group.';
                 } else {
                     $stmt = $crad->prepare("INSERT INTO `crad_publications` (research_group_id, title, authors, status, created_by_user, created_by_name) VALUES (?, ?, ?, 'Draft', ?, ?)");
-                    $stmt->execute([$groupId, $group['research_title'], $group['group_name'], (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')]);
+                    $stmt->execute([$groupId, $group['research_title'], $group['group_name'], (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? '')]);
                     logActivity('create', 'Created publication record for research group #' . $groupId, 'crad');
                     $publicationMessage = 'Publication record created.';
                 }

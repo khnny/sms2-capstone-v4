@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file
 require_once ROOT_PATH . '/includes/authentication.php';
 require_once ROOT_PATH . '/includes/security.php';
 require_once ROOT_PATH . '/modules/crad/config/config.php';
@@ -65,6 +66,8 @@ function panelDefenseRows(bool $history = false): array
         return [];
     }
 
+    cradSyncPoolPanelAssignments($crad);
+
     try {
         $sql = "SELECT
                 rds.id,
@@ -109,7 +112,7 @@ function panelDefenseRows(bool $history = false): array
               AND ev.panel_user_id = :panel_user_id
               AND ev.status = 'Submitted'
              WHERE rds.defense_datetime IS NOT NULL
-               AND LOWER(TRIM(COALESCE(rds.defense_type, ''))) = 'pre-oral'
+               AND " . cradPreOralDefenseTypeSql('rds.defense_type') . "
                AND LOWER(rds.status) IN ('scheduled', 'finalized', 'final', 'completed', 'passed', 'failed')
                AND rpa_self.id IS NOT NULL
                AND EXISTS (
@@ -173,7 +176,7 @@ function chapterPanelCanAccessSubmission(PDO $crad, array $submission): bool
     try {
         $stmt = $crad->prepare(
             "SELECT id, panel_members, panel_chair, status, defense_datetime
-             FROM `crad_research_defense_schedules`
+             FROM `crad_research_defense_schedules` research_defense_schedules
              WHERE research_group_id = ?
                AND defense_datetime IS NOT NULL
                AND LOWER(status) IN ('scheduled', 'finalized', 'final', 'completed', 'passed', 'failed')

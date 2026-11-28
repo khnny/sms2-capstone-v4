@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$group) $error = 'Only approved groups without an existing publication record may be selected.';
         else {
             $insert = $crad->prepare("INSERT INTO `crad_publications` (research_group_id, title, authors, status, created_by_user, created_by_name) VALUES (?, ?, ?, 'Draft', ?, ?)");
-            $insert->execute([$groupId, $group['research_title'], $group['group_name'], (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? '')]);
+            $insert->execute([$groupId, $group['research_title'], $group['group_name'], (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? '')]);
             logActivity('create', 'Created publication record for research group #' . $groupId, 'crad'); $message = 'Publication record created.';
         }
     }

@@ -212,7 +212,9 @@ function smsRenderResearchHub(array $st, string $baseUrl, ?callable $actionHref 
     }
     $nextDefense = 'Not scheduled';
     foreach ($steps as $st2) {
-        if ($st2['key'] === 'defense' && !empty($st2['list']['rows'])) {
+        if ($st2['key'] === 'defense' && ($st2['state'] ?? '') === 'done') {
+            $nextDefense = 'All done';
+        } elseif ($st2['key'] === 'defense' && !empty($st2['list']['rows'])) {
             $di = smsHubCol($st2['list'], 'Date and time');
             if ($di >= 0 && trim((string) $st2['list']['rows'][0][$di]) !== '') {
                 $nextDefense = (string) $st2['list']['rows'][0][$di];

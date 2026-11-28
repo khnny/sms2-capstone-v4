@@ -1616,7 +1616,8 @@ function rpGetRevisionMonitoringGroups(PDO $crad, int $adviserUserId, string $ad
                 FROM `crad_research_defense_schedules` rds2
                 WHERE (rds2.research_group_id = rg.id
                        OR (rds2.research_group_id IS NULL AND rds2.group_number = rg.group_number))
-                  AND LOWER(rds2.status) IN ('finalized', 'final', 'completed', 'passed', 'failed')
+                  AND LOWER(rds2.status) IN ('scheduled', 'finalized', 'final', 'completed', 'passed', 'failed')
+                  AND " . cradPreOralDefenseTypeSql('rds2.defense_type') . "
                   AND rds2.defense_datetime IS NOT NULL
                 ORDER BY COALESCE(rds2.defense_datetime, rds2.updated_at) DESC, rds2.id DESC
                 LIMIT 1
@@ -2041,11 +2042,14 @@ function rpGetGroupPanelApproval(PDO $crad, int $groupId): ?array
     }
 
     try {
-        // Find the most-recent finalized defense schedule for this group.
+        cradSyncPoolPanelAssignments($crad, $groupId);
+
+        // Find the most-recent pre-oral defense schedule for this group.
         $schedStmt = $crad->prepare(
             "SELECT id
              FROM `crad_research_defense_schedules`
              WHERE research_group_id = ?
+               AND " . cradPreOralDefenseTypeSql('defense_type') . "
                AND defense_datetime IS NOT NULL
                AND LOWER(status) IN ('scheduled','finalized','final','completed','passed','failed')
              ORDER BY defense_datetime DESC, id DESC
@@ -2160,8 +2164,8 @@ function rpIsFirstSemesterComplete(PDO $crad, int $planId, int $groupId): bool
         "SELECT id
          FROM `crad_research_defense_schedules`
          WHERE research_group_id = ?
-           AND defense_type = '" . CRAD_DEFENSE_TYPE_PRE_ORAL . "'
-           AND LOWER(TRIM(status)) = 'finalized'
+           AND " . cradPreOralDefenseTypeSql('defense_type') . "
+           AND LOWER(TRIM(status)) IN ('scheduled', 'finalized', 'final', 'completed', 'passed')
          ORDER BY defense_datetime DESC, id DESC
          LIMIT 1"
     );

@@ -13,6 +13,7 @@
  */
 declare(strict_types=1);
 
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file
 require_once ROOT_PATH . '/config/database.php';
 if (!function_exists('smsSetting')) {
     require_once ROOT_PATH . '/includes/security.php';

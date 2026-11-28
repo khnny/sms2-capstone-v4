@@ -1,4 +1,5 @@
 <?php
+if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file
 /**
  * Shared Reports & Analytics page renderer
  * Overview-style chart dashboard (role / module accurate).

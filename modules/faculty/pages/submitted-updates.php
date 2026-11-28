@@ -38,7 +38,7 @@ try {
 
 $adviserUserId = (int) ($_SESSION['user_id'] ?? 0);
 $adviserEmail  = rpCurrentUserEmail();
-$adviserName   = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
+$adviserName   = trim((string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
 $groupContext = rpResolveAdviserResearchGroupContext($crad, $adviserUserId, $adviserEmail, $_GET['group'] ?? null);
 
 if ($groupContext['status'] === 'no_groups') {
