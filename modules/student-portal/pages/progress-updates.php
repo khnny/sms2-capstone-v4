@@ -45,7 +45,7 @@ try {
 // Get student's research group — only if it is in the Capstone Group/Student Registry
 $studentId     = trim((string) ($_SESSION['student_id'] ?? ''));
 $studentUserId = (int) ($_SESSION['user_id'] ?? 0);
-$studentName   = trim((string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
+$studentName   = trim((string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? ''));
 
 $researchGroup = rpGetRegisteredResearchGroup($crad, $studentId, $studentUserId);
 

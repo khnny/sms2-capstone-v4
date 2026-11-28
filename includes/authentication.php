@@ -1086,6 +1086,15 @@ function requireModuleAccess(string $moduleKey): void
                 }
             }
         }
+        // Advisers review their own groups' final manuscripts (the faculty
+        // sidebar links here); the page itself limits rows to assigned groups.
+        if ($roleKey === 'adviser') {
+            foreach (['/modules/crad/pages/final-manuscript-review.php', '/modules/crad/api/final-manuscript-document.php'] as $allowedPath) {
+                if (str_ends_with($scriptPath, $allowedPath)) {
+                    return;
+                }
+            }
+        }
         if (in_array($roleKey, ['review_committee', 'adviser'], true)) {
             foreach ($grantReviewerPages as $allowedPath) {
                 if (str_ends_with($scriptPath, $allowedPath)) {

@@ -1,3 +1,4 @@
+<?php if (realpath((string) ($_SERVER['SCRIPT_FILENAME'] ?? '')) === __FILE__) { http_response_code(404); exit; } // include-only file ?>
 <div id="rscSigModal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.68);overflow:auto;padding:2rem 1rem;">
     <div style="max-width:500px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#065f46 0%,#047857 55%,#059669 100%);padding:1rem 1.4rem;display:flex;align-items:center;justify-content:space-between;">

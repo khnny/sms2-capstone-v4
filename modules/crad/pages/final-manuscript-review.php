@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $submissionId,
                             $submission['research_group_id'],
                             (int) $_SESSION['user_id'],
-                            (string) ($_SESSION['full_name'] ?? $_SESSION['username'] ?? ''),
+                            (string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? ''),
                             $scores['content'],
                             $scores['methodology'],
                             $scores['results'],
