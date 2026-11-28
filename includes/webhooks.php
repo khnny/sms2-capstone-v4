@@ -87,6 +87,13 @@ function smsWebhookClientWants(array $client, string $eventType): bool
     return false;
 }
 
+/** The event filter picks what a client wants; its scopes decide what it may see. */
+function smsWebhookClientMayReceive(array $client, string $eventType, array $data): bool
+{
+    $scope = smsApiEventScope($eventType, $data);
+    return $scope === null || smsApiClientHasScope($client, $scope);
+}
+
 /**
  * Queue one event for every active client that subscribes to its type.
  *
@@ -111,11 +118,11 @@ function smsWebhookEmit(PDO $pdo, string $eventType, array $data, array $subject
         ->execute([$eventId, $eventType, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)]);
     $eventPk = (int) $pdo->lastInsertId();
 
-    $clients = $pdo->query("SELECT client_id, webhook_events FROM `sms2_api_clients`
+    $clients = $pdo->query("SELECT client_id, webhook_events, scopes FROM `sms2_api_clients`
                             WHERE status = 'active' AND webhook_url IS NOT NULL AND webhook_url <> ''")->fetchAll();
     $insert = $pdo->prepare('INSERT IGNORE INTO `sms2_webhook_deliveries` (event_pk, client_id) VALUES (?, ?)');
     foreach ($clients as $client) {
-        if (smsWebhookClientWants($client, $eventType)) {
+        if (smsWebhookClientWants($client, $eventType) && smsWebhookClientMayReceive($client, $eventType, $data)) {
             $insert->execute([$eventPk, (string) $client['client_id']]);
         }
     }

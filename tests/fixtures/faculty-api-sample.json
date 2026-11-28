@@ -1,0 +1,8 @@
+{
+  "_comment": "Mock Faculty API response for the planned tools/sync-faculty.php (docs/INTEGRATION-API.md section 7). Fake people only.",
+  "data": [
+    { "employee_id": "EMP-0001", "full_name": "Juan Dela Cruz", "email": "juan.delacruz@example.edu", "department": "BSIT", "status": "active", "roles": ["adviser", "panel"] },
+    { "employee_id": "EMP-0002", "full_name": "Maria Santos", "email": "maria.santos@example.edu", "department": "BSCS", "status": "active", "roles": ["research_coordinator"] },
+    { "employee_id": "EMP-0003", "full_name": "Pedro Reyes", "email": "pedro.reyes@example.edu", "department": "BSIT", "status": "inactive", "roles": ["grammarian"] }
+  ]
+}
