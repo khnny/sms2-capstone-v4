@@ -8,7 +8,7 @@
  * Auth:   POST auth/token   (code or refresh token -> JWT access token)
  *         POST auth/revoke  (log out: revoke a refresh token)
  *         POST auth/ticket  (one-time link that opens an SMS 2 page, same user)
- * Data:   GET  me, me/research, me/research/members, me/research/timeline,
+ * Data:   GET  me, me/research, me/research/statement, me/research/members, me/research/timeline,
  *              me/research/submissions, me/research/feedback, me/defenses,
  *              me/clearance, me/notifications, announcements
  * Ops:    GET  health
@@ -230,6 +230,11 @@ try {
             $auth = apiRequireUser('student');
             apiData(smsApiResearchSummary(getCradDatabaseConnection(), $auth['user']));
 
+        case 'GET me/research/statement':
+            $auth = apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/research-statement.php';
+            apiData(smsResearchStatement(getCradDatabaseConnection(), $auth['user']));
+
         case 'GET me/research/members':
             $auth = apiRequireUser('student');
             apiData(smsApiGroupMembers(getCradDatabaseConnection(), $auth['user']));
@@ -271,7 +276,7 @@ try {
             apiData(smsWebhookRun());
     }
 
-    $known = ['health', 'auth/token', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/members', 'me/research/timeline',
+    $known = ['health', 'auth/token', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/members', 'me/research/timeline',
         'me/research/submissions', 'me/research/feedback', 'me/defenses', 'me/clearance', 'me/notifications', 'announcements'];
     if (in_array($route, $known, true)) {
         apiError(405, 'method_not_allowed', 'Method not allowed for this endpoint.');

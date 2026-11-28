@@ -160,7 +160,12 @@ function smsHubFacts(array $step, int $max = 3): array
     return $facts;
 }
 
-function smsRenderResearchHub(array $st, string $baseUrl): string
+/**
+ * @param callable|null $actionHref When given, fn(array $step): ?string returns a URL and
+ *        step actions open that URL in a new tab instead of a pop-up (used by the
+ *        separate Student Portal, which cannot show SMS 2 pages inside a pop-up).
+ */
+function smsRenderResearchHub(array $st, string $baseUrl, ?callable $actionHref = null): string
 {
     $s = $st['summary'];
     $student = $st['student'];
@@ -178,9 +183,13 @@ function smsRenderResearchHub(array $st, string $baseUrl): string
         !empty($s['adviser']) ? 'Adviser: ' . $s['adviser'] : '',
         !empty($student['school_year']) ? 'AY ' . $student['school_year'] : '',
     ]);
-    $actionAttrs = static function (array $step) use ($baseUrl): string {
+    $actionAttrs = static function (array $step) use ($baseUrl, $actionHref): string {
         if (empty($step['action']) || $step['state'] === 'locked') {
             return '';
+        }
+        if ($actionHref !== null) {
+            $href = $actionHref($step);
+            return $href ? ' data-rh-href="' . smsRsEsc($href) . '"' : '';
         }
         return ' data-rh-open="frame" data-rh-src="' . smsRsEsc($baseUrl . $step['action']['path']) . '" data-rh-title="' . smsRsEsc(smsHubTitle($step)) . '" data-rh-no="' . (int) $step['no'] . '"';
     };

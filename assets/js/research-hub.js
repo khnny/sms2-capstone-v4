@@ -82,6 +82,12 @@
     }
 
     hub.addEventListener('click', function (ev) {
+        var link = ev.target.closest('[data-rh-href]');
+        if (link) {
+            ev.preventDefault();
+            window.open(link.getAttribute('data-rh-href'), '_blank', 'noopener');
+            return;
+        }
         var btn = ev.target.closest('[data-rh-open]');
         if (btn) {
             ev.preventDefault();
@@ -116,7 +122,7 @@
     var m = /open=([a-z]+)/.exec(window.location.hash || '');
     if (m) {
         var card = document.getElementById('rh-step-' + m[1]);
-        var act = card && (card.querySelector('[data-rh-open="frame"]') || card.querySelector('[data-rh-open="details"]'));
+        var act = card && (card.querySelector('[data-rh-open="frame"]') || card.querySelector('[data-rh-href]') || card.querySelector('[data-rh-open="details"]'));
         if (act) act.click();
     }
 })();

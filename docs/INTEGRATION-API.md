@@ -86,6 +86,7 @@ Base: `<SMS2>/api/v1/` (with mod_rewrite) or `<SMS2>/api/v1/index.php/` (always 
 |---|---|
 | `GET me` | User, plus `profile` for students (program, section, year, standing, contacts) |
 | `GET me/research` | `status`, `title`, `title_approval` (adviser, coordinator and CRAD status and remarks), `group`, `plan` (progress, stage) |
+| `GET me/research/statement` | The whole CRAD process in one response: `student`, `summary` (title, group no., adviser, progress, next step) and 9 `steps` (key, title, state, status, rows, list, remarks, action). Used by the Research Hub pages. |
 | `GET me/research/members` | Group members |
 | `GET me/research/timeline` | Milestones with progress and status |
 | `GET me/research/submissions` | `chapters` (version, status, dates) and `progress_updates` |
