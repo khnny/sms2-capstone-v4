@@ -93,7 +93,7 @@ try:
     st = login(STU)
     code, _, body = get(st, PAGE_S)
     html = body.decode('utf-8', 'ignore')
-    check('the student sees the panel application page with the group title', code == 200 and TITLE in html and 'Panel Application' in html)
+    check('the student sees the defense application page with the group title', code == 200 and TITLE in html and 'Defense Application' in html)
     check('the application starts as a draft', status() == 'Draft', note=status())
     tok = csrf(st, PAGE_S)
 

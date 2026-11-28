@@ -15,7 +15,7 @@ if (getCurrentUserRoleKey() !== 'student') {
     exit('Forbidden');
 }
 
-$pageTitle = 'Panel Application';
+$pageTitle = 'Defense Application';
 $activeModule = 'student_portal';
 $activePage = 'panel-application';
 $pdo = cradDb();
@@ -76,17 +76,18 @@ foreach ($documents as $d) {
     $docByType[$d['doc_type']] = $d;
 }
 $history = $app ? cradPanelAppHistory($pdo, (int) $app['id']) : [];
-$breadcrumbs = [['label' => 'Student Portal', 'url' => BASE_URL . '/modules/student-portal/pages/dashboard.php'], ['label' => 'Panel Application', 'url' => null]];
+$breadcrumbs = [['label' => 'Student Portal', 'url' => BASE_URL . '/modules/student-portal/pages/dashboard.php'], ['label' => 'Defense Application', 'url' => null]];
 require_once ROOT_PATH . '/includes/layout-start.php';
 ?>
 <?php renderBreadcrumbs($breadcrumbs); ?>
-<h1 class="h4 mb-3">Panel Application</h1>
+<h1 class="h4 mb-3">Defense Application</h1>
+<p class="text-muted">Apply to CRAD for your defense: CRAD reviews it, assigns your panel and sets the schedule.</p>
 
 <?php if ($notice): ?><div class="alert alert-success"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
 
 <?php if (!$group || !$app): ?>
-    <div class="alert alert-warning">No research group is linked to your student account yet, so a panel application cannot start.</div>
+    <div class="alert alert-warning">No research group is linked to your student account yet, so a defense application cannot start.</div>
 <?php else: ?>
 <section class="card border-0 shadow-sm mb-4">
     <div class="card-body">
@@ -156,7 +157,7 @@ require_once ROOT_PATH . '/includes/layout-start.php';
             <form method="post" class="mt-3">
                 <?= csrfField() ?>
                 <input type="hidden" name="panel_action" value="submit">
-                <button class="btn btn-primary" type="submit">Submit panel application</button>
+                <button class="btn btn-primary" type="submit">Submit defense application</button>
                 <span class="small text-muted ms-2">Submitting locks the details and documents until CRAD responds.</span>
             </form>
         <?php endif; ?>

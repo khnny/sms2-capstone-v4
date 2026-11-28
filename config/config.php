@@ -606,7 +606,7 @@ $MODULES = [
             ['slug' => 'research-coordinator-management', 'title' => 'Research Coordinator Management'],
             ['slug' => 'capstone-group-student-registry', 'title' => 'Capstone Group/Student Registry'],
             ['slug' => 'research-defense-scheduling', 'title' => 'Research Defense Scheduling'],
-            ['slug' => 'panel-applications', 'title' => 'Panel Applications'],
+            ['slug' => 'panel-applications', 'title' => 'Defense Applications'],
             ['slug' => 'dashboard-analytics', 'title' => 'Dashboard & Analytics'],
             ['slug' => 'grant-opportunities', 'title' => 'Grant Opportunities'],
             ['slug' => 'proposals-applications', 'title' => 'Proposals & Applications'],

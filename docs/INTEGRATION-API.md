@@ -124,6 +124,23 @@ with `{"error":{"code":"not_submitted","message":"…"}}`; show the message to t
 | `POST me/research/chapters` | `chapter_number` (1-3), `document` (file, max 10 MB), `notes`, `submission_token` (64 hex chars, new per form; blocks double submits) | `version`, `submission_id` |
 | `GET me/research/manuscript` | | `available`, `eligible`, `can_submit`, `message`, `max_mb`, `submissions` (version, status, file name, dates) |
 | `POST me/research/manuscript` | `manuscript` (file, max 20 MB), `notes` | `version`, `submission_id`. Refused while the latest version is not returned for revision. |
+| `GET me/research/group` | | `has_group`, `flow_status`, `status_label`, `can_edit`, `min_members`, `max_members`, `group_number`, `incomplete_reason`, `remarks`, `members` (full_name, student_id, section, is_leader) |
+| `POST me/research/group` | `members[i][full_name]`, `members[i][student_id]`, `members[i][section]`, `incomplete_reason`, `action` (`draft` or `submit`) | `message`. Refused once the group is with the Department Head or approved. |
+| `GET me/research/title` | | `can_submit`, `is_resubmit`, `message`, `adviser`, `coordinator`, `members` (from the Research Group), `options` (departments, discipline clusters, agendas, SDGs, defaults), `submission` (latest form and its adviser / coordinator / CRAD status and remarks) |
+| `POST me/research/title` | `research_title`, `department`, `discipline`, `research_agenda` (+ `research_agenda_others`), `primary_sdg` (`SDG 9 — Industry, …`), `justification` | `message`, `submission_id`. Sends a new form, or resends a returned one. Same gates as `modules/crad/api/send-to-adviser.php`. |
+| `GET me/research/progress` | | `available`, `message`, `max_mb`, `statuses`, `milestones` (id, name, status, progress, chapter, pending, can_submit), `history` |
+| `POST me/research/progress` | `milestone_id`, `new_progress`, `milestone_status` (`Not Started` or `Submitted for Review`), `update_title`, `accomplishments`, `problems_blockers`, `next_planned_activity`, `submission_token` (64 hex), `document` (file; required for a chapter milestone sent for review) | `message`, `update_id` |
+| `GET me/research/panel` | | `available`, `message`, `max_mb`, `application` (ref, status, editable, details, review_remarks, documents, history). Starts a draft the first time, like the SMS 2 page. |
+| `POST me/research/panel` | `action` = `save_details` (`research_title`, `adviser_name`, `members_text`), `upload_document` (`doc_type`, `document`) or `submit` | `message` |
+| `GET me/research/payment` | | `available`, `message`, `max_mb`, `stages` (Research 1 / 2: status, O.R. number, remarks, `can_upload`, `locked_reason`) |
+| `POST me/research/payment` | `stage` (`research_1` or `research_2`), `payment_file` (PNG or JPG), `or_number` (optional; read from the picture when blank) | `message` |
+| `GET me/research/clearance-form` | | `available`, `message`, `max_mb`, `stages` (id, status, `can_upload`, `locked_reason`, CRAD remarks, `form_html` = the printable form) |
+| `POST me/research/clearance-form` | `id`, `clearance_file` (PNG or JPG of the signed form) | `message` |
+
+With these, every student step of the CRAD process can be done from the portal. CRAD officers,
+advisers, coordinators, panels and Admin keep reviewing in SMS 2 as before. The SMS 2 page endpoints
+(`send-to-adviser.php`, `research-progress.php`) and the API call the same functions
+(`modules/crad/includes/title-approval-submit.php`, `research-progress-submit.php`).
 
 Example:
 
@@ -150,6 +167,8 @@ SMS 2 checks the CRAD tables every run (cron, every minute) and sends one event 
 | `defense.status_changed` | Only the status changed |
 | `clearance.status_changed` | Research clearance (`kind: clearance`) or college payment (`kind: payment`) status changed |
 | `manuscript.final_approved` | Final manuscript approved |
+| `research.group_status_changed` | Research group approved, ready for assignment, or rejected |
+| `research.panel_application_status_changed` | Panel application under review, approved, rejected, scheduled or completed |
 
 The first run only records the current state, so existing records do not send old events.
 
@@ -179,6 +198,6 @@ Receiver rules: verify the signature with `hash_equals`, reject timestamps older
 
 ## 7. Known limits (v1)
 
-- The API is read-only for students. Submissions, uploads, panel applications and payments still happen on the SMS 2 student pages, opened from the portal through `auth/ticket` with the same login.
+- Uploaded files (payment pictures, signed forms) are not served back through the API; the portal shows the file name and status only.
 - Webhook latency is up to one minute (the cron interval).
 - A student with no Registrar profile row gets the profile defaults that the existing Student Portal already uses (for example the "BSIT 4A" section). Fix those records in the Registrar data.

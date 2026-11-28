@@ -293,58 +293,19 @@ $breadcrumbs = [
     ['label' => 'Research Proposal Submission', 'url' => null],
 ];
 
-$departments = [
-    'College of Computer Studies',
-    'College of Business Administration',
-    'College of Education',
-    'College of Criminal Justice',
-    'College of Hospitality & Tourism Management',
-    'College of Nursing and Health Sciences',
-];
+require_once ROOT_PATH . '/modules/crad/includes/title-approval-submit.php';
+$titleFormOptions = cradTitleFormOptions();
+$departments = $titleFormOptions['departments'];
 
 $screeningChecked = static function (array $screening, string $key, string $value): string {
     return strtolower((string) ($screening[$key] ?? '')) === $value ? '&#10003;' : '';
 };
 
-$disciplineClusters = [
-    'Natural Sciences, Environmental Studies, and Mathematics',
-    'Education, Curriculum, Teaching, and Learning',
-    'Health Sciences, Mental Health, and Allied Professions',
-    'Engineering, Information Technology, and Computing',
-    'Humanities, Social Sciences, and Public Safety',
-    'Business, Entrepreneurship, Hospitality, and Tourism Management',
-];
+$disciplineClusters = $titleFormOptions['discipline_clusters'];
 
-$researchAgendas = [
-    'Quality Education and Human Capital Development',
-    'Inclusive Economic Development, Entrepreneurship, and Industry Competitiveness',
-    'Science, Technology, Digital Transformation, and Innovation',
-    'Community Health, Well-being, and Social Development',
-    'Sustainable Communities, Environmental Stewardship, and Climate Resilience',
-    'Peace, Good Governance, Public Safety, and Social Justice',
-    'Global Partnerships, Research Excellence, and Institutional Sustainability',
-    'Others [Please Specify Below]',
-];
+$researchAgendas = $titleFormOptions['research_agendas'];
 
-$sdgOptions = [
-    ['num' => 1,  'title' => 'No Poverty'],
-    ['num' => 2,  'title' => 'Zero Hunger'],
-    ['num' => 3,  'title' => 'Good Health and Well-being'],
-    ['num' => 4,  'title' => 'Quality Education'],
-    ['num' => 5,  'title' => 'Gender Equality'],
-    ['num' => 6,  'title' => 'Clean Water and Sanitation'],
-    ['num' => 7,  'title' => 'Affordable and Clean Energy'],
-    ['num' => 8,  'title' => 'Decent Work and Economic Growth'],
-    ['num' => 9,  'title' => 'Industry, Innovation and Infrastructure'],
-    ['num' => 10, 'title' => 'Reduced Inequalities'],
-    ['num' => 11, 'title' => 'Sustainable Cities and Communities'],
-    ['num' => 12, 'title' => 'Responsible Consumption and Production'],
-    ['num' => 13, 'title' => 'Climate Action'],
-    ['num' => 14, 'title' => 'Life Below Water'],
-    ['num' => 15, 'title' => 'Life on Land'],
-    ['num' => 16, 'title' => 'Peace, Justice and Strong Institutions'],
-    ['num' => 17, 'title' => 'Partnerships for the Goals'],
-];
+$sdgOptions = $titleFormOptions['sdgs'];
 
 $defaultDiscipline = 'Engineering, Information Technology, and Computing';
 $defaultAgenda = 'Science, Technology, Digital Transformation, and Innovation';
