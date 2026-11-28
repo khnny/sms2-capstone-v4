@@ -97,6 +97,7 @@ function smsIntegrationEnsureSchema(PDO $pdo): void
             `webhook_url` varchar(500) DEFAULT NULL,
             `webhook_secret` text DEFAULT NULL,
             `webhook_events` varchar(500) NOT NULL DEFAULT '*',
+            `scopes` varchar(500) NOT NULL DEFAULT '*',
             `status` enum('active','disabled') NOT NULL DEFAULT 'active',
             `created_at` datetime NOT NULL DEFAULT current_timestamp(),
             `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -161,6 +162,11 @@ function smsIntegrationEnsureSchema(PDO $pdo): void
     foreach ($statements as $sql) {
         $pdo->exec($sql);
     }
+    // Older installs: add the per-client scopes column. Existing clients keep full access ('*').
+    $hasScopes = $pdo->query("SHOW COLUMNS FROM `sms2_api_clients` LIKE 'scopes'")->fetch();
+    if (!$hasScopes) {
+        $pdo->exec("ALTER TABLE `sms2_api_clients` ADD COLUMN `scopes` varchar(500) NOT NULL DEFAULT '*' AFTER `webhook_events`");
+    }
     $done = true;
 }
 
@@ -172,16 +178,149 @@ function smsIntegrationDb(): PDO
     return $pdo;
 }
 
+/* ------------------------------------------------------- module clients and scopes */
+
 /**
- * Hosting without a terminal (HostForge): the Student Portal client can be
- * defined by Environment Variables instead of tools/register-api-client.php.
+ * What a client may read or do. A route needs its scope; '*' means every scope
+ * (the Student Portal, and clients registered before scopes existed).
  *
- *   SMS2_PORTAL_CLIENT_SECRET   at least 32 characters (same value on the portal)
- *   SMS2_PORTAL_REDIRECT_URI    https://<portal>/callback.php
- *   SMS2_PORTAL_WEBHOOK_URL     https://<portal>/webhook.php (optional)
- *   SMS2_PORTAL_WEBHOOK_SECRET  at least 32 characters (same value on the portal)
+ * @return array<string, string> scope => description
+ */
+function smsApiScopeCatalog(): array
+{
+    return [
+        'profile' => 'GET me (name, email, role; student profile)',
+        'research.read' => 'Research group, title, members, timeline, submissions, feedback, step forms (GET)',
+        'research.write' => 'Student research actions: group, title, chapters, progress, panel, manuscript (POST)',
+        'defenses.read' => 'GET me/defenses and defense.* webhooks',
+        'clearance.read' => 'Research clearances in GET me/clearance, GET me/research/clearance-form, clearance webhooks',
+        'clearance.write' => 'POST me/research/clearance-form (signed clearance upload)',
+        'payment.read' => 'Payments in GET me/clearance, GET me/research/payment, payment webhooks',
+        'payment.write' => 'POST me/research/payment (proof of payment upload)',
+        'statement.read' => 'GET me/research/statement (the whole CRAD process, payments included)',
+        'notifications.read' => 'GET me/notifications',
+        'announcements.read' => 'GET announcements',
+        'sso' => 'POST auth/ticket (open an SMS 2 page as the same user)',
+    ];
+}
+
+/**
+ * One preset per CRAD integration. tools/register-api-client.php and the
+ * Environment Variables path use these defaults, so every module key is set
+ * up the same way. A registrar key cannot read payments and a payment key
+ * cannot read research data.
+ *
+ * @return array<string, array{name: string, env: string, roles: string, scopes: string, events: string}>
+ */
+function smsApiModulePresets(): array
+{
+    return [
+        'student-portal' => [
+            'name' => 'Student Portal',
+            'env' => 'SMS2_PORTAL',
+            'roles' => 'student',
+            'scopes' => '*',
+            'events' => '*',
+        ],
+        'registrar' => [
+            'name' => 'Registrar',
+            'env' => 'SMS2_REGISTRAR',
+            'roles' => 'student,registrar',
+            'scopes' => 'profile research.read defenses.read clearance.read notifications.read announcements.read sso',
+            'events' => 'research.*,defense.*,clearance.status_changed,manuscript.final_approved',
+        ],
+        'payment' => [
+            'name' => 'Payment',
+            'env' => 'SMS2_PAYMENT',
+            'roles' => 'student,finance',
+            'scopes' => 'profile payment.read payment.write notifications.read announcements.read sso',
+            'events' => 'clearance.status_changed',
+        ],
+        'faculty' => [
+            'name' => 'Faculty',
+            'env' => 'SMS2_FACULTY',
+            'roles' => 'adviser,panel,grammarian,research_coordinator,research_director,hr',
+            'scopes' => 'profile defenses.read notifications.read announcements.read sso',
+            'events' => 'research.adviser_assigned,defense.*',
+        ],
+        'accreditation' => [
+            'name' => 'Accreditation',
+            'env' => 'SMS2_ACCREDITATION',
+            'roles' => 'qa',
+            'scopes' => 'profile research.read announcements.read sso',
+            'events' => 'research.title_status_changed,manuscript.final_approved',
+        ],
+    ];
+}
+
+function smsApiModulePreset(string $clientId): ?array
+{
+    return smsApiModulePresets()[$clientId] ?? null;
+}
+
+/** @return list<string> */
+function smsApiParseScopes(string $raw): array
+{
+    $scopes = preg_split('/[\s,]+/', trim($raw)) ?: [];
+    return array_values(array_unique(array_filter($scopes, 'strlen')));
+}
+
+/** Normalised scope string; throws on an unknown scope. */
+function smsApiNormalizeScopes(string $raw): string
+{
+    $scopes = smsApiParseScopes($raw);
+    if ($scopes === [] || in_array('*', $scopes, true)) {
+        return '*';
+    }
+    $known = smsApiScopeCatalog();
+    foreach ($scopes as $scope) {
+        if (!isset($known[$scope])) {
+            throw new InvalidArgumentException('Unknown scope: ' . $scope . '. Known: ' . implode(' ', array_keys($known)));
+        }
+    }
+    return implode(' ', $scopes);
+}
+
+/** @return list<string> */
+function smsApiClientScopes(array $client): array
+{
+    return smsApiParseScopes((string) ($client['scopes'] ?? '*') ?: '*');
+}
+
+function smsApiClientHasScope(array $client, string $scope): bool
+{
+    $scopes = smsApiClientScopes($client);
+    return in_array('*', $scopes, true) || in_array($scope, $scopes, true);
+}
+
+/** Scope needed to receive a webhook event (null = no data scope needed). */
+function smsApiEventScope(string $eventType, array $data = []): ?string
+{
+    if ($eventType === 'clearance.status_changed') {
+        return (($data['kind'] ?? '') === 'payment') ? 'payment.read' : 'clearance.read';
+    }
+    if (str_starts_with($eventType, 'defense.')) {
+        return 'defenses.read';
+    }
+    if (str_starts_with($eventType, 'research.') || str_starts_with($eventType, 'submission.') || str_starts_with($eventType, 'manuscript.')) {
+        return 'research.read';
+    }
+    return null;
+}
+
+/**
+ * Hosting without a terminal (HostForge): each module client can be defined
+ * by Environment Variables instead of tools/register-api-client.php.
+ * PREFIX is SMS2_PORTAL, SMS2_REGISTRAR, SMS2_PAYMENT, SMS2_FACULTY or SMS2_ACCREDITATION.
+ *
+ *   PREFIX_CLIENT_SECRET   at least 32 characters (same value on the module app)
+ *   PREFIX_REDIRECT_URI    https://<module>/callback.php (space-separate for several; optional)
+ *   PREFIX_WEBHOOK_URL     https://<module>/webhook.php (optional)
+ *   PREFIX_WEBHOOK_SECRET  at least 32 characters (same value on the module app)
+ *   PREFIX_ROLES, PREFIX_SCOPES, PREFIX_EVENTS  optional overrides of the preset
  *
  * The database row is created or corrected to match on the next request.
+ * Leave PREFIX_CLIENT_SECRET unset to manage that client with the CLI instead.
  */
 function smsApiClientSyncFromEnv(PDO $pdo): void
 {
@@ -190,21 +329,37 @@ function smsApiClientSyncFromEnv(PDO $pdo): void
         return;
     }
     $done = true;
-    $secret = (string) (sms2_env('SMS2_PORTAL_CLIENT_SECRET', '') ?? '');
-    $redirect = trim((string) (sms2_env('SMS2_PORTAL_REDIRECT_URI', '') ?? ''));
-    if ($secret === '' || $redirect === '') {
-        return;
+    foreach (smsApiModulePresets() as $clientId => $preset) {
+        smsApiClientSyncOneFromEnv($pdo, $clientId, $preset);
+    }
+}
+
+/** @return array{status: string, message?: string} status: skipped|invalid|in_sync|created|updated|error */
+function smsApiClientSyncOneFromEnv(PDO $pdo, string $clientId, array $preset): array
+{
+    $env = static fn(string $suffix): string => trim((string) (sms2_env($preset['env'] . '_' . $suffix, '') ?? ''));
+    $secret = $env('CLIENT_SECRET');
+    if ($secret === '') {
+        return ['status' => 'skipped'];
     }
     if (strlen($secret) < 32) {
-        error_log('SMS2_PORTAL_CLIENT_SECRET is shorter than 32 characters; portal client not synced.');
-        return;
+        error_log($preset['env'] . '_CLIENT_SECRET is shorter than 32 characters; ' . $clientId . ' client not synced.');
+        return ['status' => 'invalid', 'message' => 'client secret shorter than 32 characters'];
     }
-    $webhookUrl = trim((string) (sms2_env('SMS2_PORTAL_WEBHOOK_URL', '') ?? '')) ?: null;
-    $webhookSecret = (string) (sms2_env('SMS2_PORTAL_WEBHOOK_SECRET', '') ?? '');
-
+    $webhookSecret = $env('WEBHOOK_SECRET');
+    if ($webhookSecret !== '' && strlen($webhookSecret) < 32) {
+        error_log($preset['env'] . '_WEBHOOK_SECRET is shorter than 32 characters; ' . $clientId . ' client not synced.');
+        return ['status' => 'invalid', 'message' => 'webhook secret shorter than 32 characters'];
+    }
     try {
+        $redirect = implode("\n", preg_split('/\s+/', $env('REDIRECT_URI'), -1, PREG_SPLIT_NO_EMPTY) ?: []);
+        $webhookUrl = $env('WEBHOOK_URL') ?: null;
+        $roles = $env('ROLES') ?: $preset['roles'];
+        $scopes = smsApiNormalizeScopes($env('SCOPES') ?: $preset['scopes']);
+        $events = $env('EVENTS') ?: $preset['events'];
+
         $stmt = $pdo->prepare('SELECT * FROM `sms2_api_clients` WHERE client_id = ?');
-        $stmt->execute(['student-portal']);
+        $stmt->execute([$clientId]);
         $row = $stmt->fetch() ?: null;
         $storedWebhookSecret = '';
         if ($row && !empty($row['webhook_secret'])) {
@@ -219,26 +374,36 @@ function smsApiClientSyncFromEnv(PDO $pdo): void
             && password_verify($secret, (string) $row['secret_hash'])
             && trim((string) $row['redirect_uris']) === $redirect
             && ($row['webhook_url'] ?: null) === $webhookUrl
-            && $storedWebhookSecret === $webhookSecret;
+            && $storedWebhookSecret === $webhookSecret
+            && (string) $row['allowed_roles'] === $roles
+            && (string) ($row['scopes'] ?? '*') === $scopes
+            && (string) $row['webhook_events'] === $events;
         if ($inSync) {
-            return;
+            return ['status' => 'in_sync'];
         }
         $values = [
             'secret_hash' => password_hash($secret, PASSWORD_DEFAULT),
             'redirect_uris' => $redirect,
             'webhook_url' => $webhookUrl,
             'webhook_secret' => $webhookSecret !== '' ? smsSecretEncrypt($webhookSecret) : null,
-            'client_id' => 'student-portal',
+            'allowed_roles' => $roles,
+            'scopes' => $scopes,
+            'webhook_events' => $events,
+            'client_id' => $clientId,
         ];
         if ($row) {
             $pdo->prepare("UPDATE `sms2_api_clients` SET secret_hash = :secret_hash, redirect_uris = :redirect_uris, webhook_url = :webhook_url,
-                           webhook_secret = :webhook_secret, allowed_roles = 'student', status = 'active' WHERE client_id = :client_id")->execute($values);
-        } else {
-            $pdo->prepare("INSERT INTO `sms2_api_clients` (client_id, name, secret_hash, redirect_uris, allowed_roles, webhook_url, webhook_secret, webhook_events)
-                           VALUES (:client_id, 'Student Portal', :secret_hash, :redirect_uris, 'student', :webhook_url, :webhook_secret, '*')")->execute($values);
+                           webhook_secret = :webhook_secret, allowed_roles = :allowed_roles, scopes = :scopes, webhook_events = :webhook_events,
+                           status = 'active' WHERE client_id = :client_id")->execute($values);
+            return ['status' => 'updated'];
         }
+        $pdo->prepare("INSERT INTO `sms2_api_clients` (client_id, name, secret_hash, redirect_uris, allowed_roles, scopes, webhook_url, webhook_secret, webhook_events)
+                       VALUES (:client_id, :name, :secret_hash, :redirect_uris, :allowed_roles, :scopes, :webhook_url, :webhook_secret, :webhook_events)")
+            ->execute($values + ['name' => $preset['name']]);
+        return ['status' => 'created'];
     } catch (Throwable $e) {
-        error_log('Portal client sync from environment failed: ' . $e->getMessage());
+        error_log($clientId . ' client sync from environment failed: ' . $e->getMessage());
+        return ['status' => 'error', 'message' => $e->getMessage()];
     }
 }
 
@@ -295,7 +460,7 @@ function smsApiClientAllowsRole(array $client, string $roleKey): bool
 /**
  * Create or update a client. Returns the plain secret when one is (re)generated.
  *
- * @param array{name?: string, redirect_uris?: string, allowed_roles?: string, webhook_url?: ?string, webhook_events?: string, rotate_secret?: bool, rotate_webhook_secret?: bool} $opts
+ * @param array{name?: string, redirect_uris?: string, allowed_roles?: string, scopes?: string, webhook_url?: ?string, webhook_events?: string, preset?: string, apply_preset?: bool, rotate_secret?: bool, rotate_webhook_secret?: bool} $opts
  * @return array{client_id: string, client_secret: ?string, webhook_secret: ?string}
  */
 function smsApiClientUpsert(string $clientId, array $opts): array
@@ -317,12 +482,30 @@ function smsApiClientUpsert(string $clientId, array $opts): array
         $plainWebhookSecret = smsIntegrationRandomToken(32);
     }
 
+    // Module presets (registrar, payment, ...) fill the defaults of a new client,
+    // or reset an existing one when 'apply_preset' (or a named 'preset') is given.
+    // Explicit options win.
+    $presetName = (string) ($opts['preset'] ?? $clientId);
+    $preset = smsApiModulePreset($presetName);
+    if (isset($opts['preset']) && !$preset) {
+        throw new InvalidArgumentException('Unknown preset: ' . $presetName . '. Presets: ' . implode(', ', array_keys(smsApiModulePresets())));
+    }
+    $base = $existing ?? [];
+    if ($preset && (!$existing || !empty($opts['apply_preset']) || isset($opts['preset']))) {
+        $base = [
+            'name' => $existing['name'] ?? $preset['name'],
+            'allowed_roles' => $preset['roles'],
+            'scopes' => $preset['scopes'],
+            'webhook_events' => $preset['events'],
+        ] + $base;
+    }
     $fields = [
-        'name' => (string) ($opts['name'] ?? ($existing['name'] ?? $clientId)),
+        'name' => (string) ($opts['name'] ?? ($base['name'] ?? $clientId)),
         'redirect_uris' => trim((string) ($opts['redirect_uris'] ?? ($existing['redirect_uris'] ?? ''))),
-        'allowed_roles' => (string) ($opts['allowed_roles'] ?? ($existing['allowed_roles'] ?? 'student')),
+        'allowed_roles' => (string) ($opts['allowed_roles'] ?? ($base['allowed_roles'] ?? 'student')),
+        'scopes' => smsApiNormalizeScopes((string) ($opts['scopes'] ?? ($base['scopes'] ?? '*'))),
         'webhook_url' => array_key_exists('webhook_url', $opts) ? ($opts['webhook_url'] ?: null) : ($existing['webhook_url'] ?? null),
-        'webhook_events' => (string) ($opts['webhook_events'] ?? ($existing['webhook_events'] ?? '*')),
+        'webhook_events' => (string) ($opts['webhook_events'] ?? ($base['webhook_events'] ?? '*')),
     ];
     foreach (preg_split('/\s+/', $fields['redirect_uris']) ?: [] as $uri) {
         if ($uri !== '' && !filter_var($uri, FILTER_VALIDATE_URL)) {
@@ -334,14 +517,14 @@ function smsApiClientUpsert(string $clientId, array $opts): array
     }
 
     if ($existing) {
-        $sql = 'UPDATE `sms2_api_clients` SET name = :name, redirect_uris = :redirect_uris, allowed_roles = :allowed_roles,
+        $sql = 'UPDATE `sms2_api_clients` SET name = :name, redirect_uris = :redirect_uris, allowed_roles = :allowed_roles, scopes = :scopes,
                 webhook_url = :webhook_url, webhook_events = :webhook_events, status = \'active\''
             . ($plainSecret !== null ? ', secret_hash = :secret_hash' : '')
             . ($plainWebhookSecret !== null ? ', webhook_secret = :webhook_secret' : '')
             . ' WHERE client_id = :client_id';
     } else {
-        $sql = 'INSERT INTO `sms2_api_clients` (client_id, name, secret_hash, redirect_uris, allowed_roles, webhook_url, webhook_secret, webhook_events)
-                VALUES (:client_id, :name, :secret_hash, :redirect_uris, :allowed_roles, :webhook_url, :webhook_secret, :webhook_events)';
+        $sql = 'INSERT INTO `sms2_api_clients` (client_id, name, secret_hash, redirect_uris, allowed_roles, scopes, webhook_url, webhook_secret, webhook_events)
+                VALUES (:client_id, :name, :secret_hash, :redirect_uris, :allowed_roles, :scopes, :webhook_url, :webhook_secret, :webhook_events)';
     }
     $params = $fields + ['client_id' => $clientId];
     if ($plainSecret !== null) {
@@ -436,6 +619,7 @@ function smsApiIssueTokens(array $client, array $user): array
         'nbf' => $now,
         'exp' => $now + SMS_API_ACCESS_TTL,
         'jti' => bin2hex(random_bytes(12)),
+        'scope' => implode(' ', smsApiClientScopes($client)),
     ];
     $refresh = smsIntegrationRandomToken(32);
     smsIntegrationDb()->prepare(
@@ -448,6 +632,7 @@ function smsApiIssueTokens(array $client, array $user): array
         'token_type' => 'Bearer',
         'expires_in' => SMS_API_ACCESS_TTL,
         'refresh_token' => $refresh,
+        'scope' => implode(' ', smsApiClientScopes($client)),
         'user' => smsApiPublicUser($user),
     ];
 }
@@ -645,7 +830,11 @@ function smsApiPasswordLoginDenied(array $client, ?array $user): array
     if ($user) {
         logActivity('sso', 'Sign-in to ' . (string) $client['name'] . ' refused: role not allowed', 'System', (int) $user['id'], (string) ($user['full_name'] ?? ''), (string) ($user['role_key'] ?? ''), false);
     }
-    return ['ok' => false, 'status' => 403, 'error' => 'access_denied', 'message' => 'This portal is for student accounts only. Staff and faculty should use SMS 2 directly.'];
+    $roles = smsApiClientRoles($client);
+    $message = $roles === ['student']
+        ? 'This portal is for student accounts only. Staff and faculty should use SMS 2 directly.'
+        : 'Your account cannot sign in to ' . (string) $client['name'] . '. Use SMS 2 directly.';
+    return ['ok' => false, 'status' => 403, 'error' => 'access_denied', 'message' => $message];
 }
 
 /** @return array{mfa_token: string, methods: list<string>, expires_in: int} */

@@ -128,13 +128,24 @@ function apiAuthenticateClient(): array
     return $client;
 }
 
-/** @return array{user: array, client: array, claims: array} */
-function apiRequireUser(?string $role = null): array
+/**
+ * @param string|list<string>|null $scope needed client scope(s); a list means any one of them
+ * @return array{user: array, client: array, claims: array}
+ */
+function apiRequireUser(?string $role = null, string|array|null $scope = null): array
 {
     $auth = smsApiAuthenticateBearer(apiHeader('Authorization'));
     if (!$auth['ok']) {
         header('WWW-Authenticate: Bearer error="invalid_token"');
         apiError(401, (string) $auth['error'], 'A valid access token is required.');
+    }
+    if ($scope !== null) {
+        $needed = (array) $scope;
+        $granted = array_filter($needed, static fn(string $s): bool => smsApiClientHasScope($auth['client'], $s));
+        if ($granted === []) {
+            header('WWW-Authenticate: Bearer error="insufficient_scope", scope="' . implode(' ', $needed) . '"');
+            apiError(403, 'insufficient_scope', 'This app\'s API key does not have access to this data (needs ' . implode(' or ', $needed) . ').');
+        }
     }
     if ($role !== null && $auth['user']['role_key'] !== $role) {
         apiError(403, 'forbidden', 'This endpoint is only available to ' . $role . ' accounts.');
@@ -240,7 +251,7 @@ try {
             apiData(['revoked' => true]);
 
         case 'POST auth/ticket':
-            $auth = apiRequireUser();
+            $auth = apiRequireUser(null, 'sso');
             $next = smsApiSafeNextPath(apiInputString('path'));
             if ($next === null) {
                 apiError(422, 'invalid_path', 'path must be an SMS 2 page path such as /modules/student-portal/pages/submit-chapters.php');
@@ -252,7 +263,7 @@ try {
             ]);
 
         case 'GET me':
-            $auth = apiRequireUser();
+            $auth = apiRequireUser(null, 'profile');
             $me = smsApiPublicUser($auth['user']);
             if ($auth['user']['role_key'] === 'student') {
                 $me['profile'] = smsApiStudentProfile($auth['user']);
@@ -260,21 +271,21 @@ try {
             apiData($me);
 
         case 'GET me/research':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'research.read');
             apiData(smsApiResearchSummary(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/research/statement':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'statement.read');
             require_once ROOT_PATH . '/includes/research-statement.php';
             apiData(smsResearchStatement(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/research/chapters':
-            apiRequireUser('student');
+            apiRequireUser('student', 'research.read');
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             apiData(smsApiChapterState());
 
         case 'POST me/research/chapters':
-            apiRequireUser('student');
+            apiRequireUser('student', 'research.write');
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             $result = smsApiChapterSubmit(
                 (int) apiInputString('chapter_number'),
@@ -288,12 +299,12 @@ try {
             apiData($result);
 
         case 'GET me/research/manuscript':
-            apiRequireUser('student');
+            apiRequireUser('student', 'research.read');
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             apiData(smsApiManuscriptState());
 
         case 'POST me/research/manuscript':
-            apiRequireUser('student');
+            apiRequireUser('student', 'research.write');
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             $result = smsApiManuscriptSubmit(
                 is_array($_FILES['manuscript'] ?? null) ? $_FILES['manuscript'] : [],
@@ -311,7 +322,11 @@ try {
         case 'GET me/research/panel':
         case 'GET me/research/payment':
         case 'GET me/research/clearance-form':
-            apiRequireUser('student');
+            apiRequireUser('student', match ($route) {
+                'me/research/payment' => 'payment.read',
+                'me/research/clearance-form' => 'clearance.read',
+                default => 'research.read',
+            });
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             apiData(match ($route) {
                 'me/research/group' => smsApiGroupState(),
@@ -328,7 +343,11 @@ try {
         case 'POST me/research/panel':
         case 'POST me/research/payment':
         case 'POST me/research/clearance-form':
-            apiRequireUser('student');
+            apiRequireUser('student', match ($route) {
+                'me/research/payment' => 'payment.write',
+                'me/research/clearance-form' => 'clearance.write',
+                default => 'research.write',
+            });
             require_once ROOT_PATH . '/includes/student-actions-api.php';
             $in = apiInput();
             $file = static fn(string $field): array => is_array($_FILES[$field] ?? null) ? $_FILES[$field] : [];
@@ -350,35 +369,43 @@ try {
             apiData($result);
 
         case 'GET me/research/members':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'research.read');
             apiData(smsApiGroupMembers(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/research/timeline':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'research.read');
             apiData(smsApiTimeline(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/research/submissions':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'research.read');
             apiData(smsApiSubmissions(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/research/feedback':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'research.read');
             apiData(smsApiFeedback(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/defenses':
-            $auth = apiRequireUser('student');
+            $auth = apiRequireUser('student', 'defenses.read');
             apiData(smsApiDefenses(getCradDatabaseConnection(), $auth['user']));
 
         case 'GET me/clearance':
-            $auth = apiRequireUser('student');
-            apiData(smsApiClearance(getCradDatabaseConnection(), $auth['user']));
+            // Registrar sees clearances only, Payment sees payments only.
+            $auth = apiRequireUser('student', ['clearance.read', 'payment.read']);
+            $clearance = smsApiClearance(getCradDatabaseConnection(), $auth['user']);
+            if (!smsApiClientHasScope($auth['client'], 'clearance.read')) {
+                unset($clearance['clearances']);
+            }
+            if (!smsApiClientHasScope($auth['client'], 'payment.read')) {
+                unset($clearance['payments']);
+            }
+            apiData($clearance);
 
         case 'GET me/notifications':
-            apiRequireUser();
+            apiRequireUser(null, 'notifications.read');
             apiData(smsApiNotifications());
 
         case 'GET announcements':
-            $auth = apiRequireUser();
+            $auth = apiRequireUser(null, 'announcements.read');
             apiData(smsApiAnnouncements($auth['user']));
 
         case 'POST internal/webhooks/run':

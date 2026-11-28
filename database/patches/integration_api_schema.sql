@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `sms2_api_clients` (
   `webhook_url` varchar(500) DEFAULT NULL,
   `webhook_secret` text DEFAULT NULL,
   `webhook_events` varchar(500) NOT NULL DEFAULT '*',
+  `scopes` varchar(500) NOT NULL DEFAULT '*',
   `status` enum('active','disabled') NOT NULL DEFAULT 'active',
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
@@ -18,6 +19,10 @@ CREATE TABLE IF NOT EXISTS `sms2_api_clients` (
   UNIQUE KEY `uq_api_client_id` (`client_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ;
+
+-- Older installs (table created before per-client scopes). The app also adds this
+-- column by itself on first use. Existing clients keep full access ('*').
+-- ALTER TABLE `sms2_api_clients` ADD COLUMN `scopes` varchar(500) NOT NULL DEFAULT '*' AFTER `webhook_events`;
 
 CREATE TABLE IF NOT EXISTS `sms2_api_auth_codes` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
