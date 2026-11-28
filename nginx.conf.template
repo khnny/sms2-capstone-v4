@@ -4,5 +4,12 @@ server {
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+    charset utf-8;
+    charset_types text/css application/javascript;
+
+    # Always check for a fresh page and link list, so new subsystem links show up right away.
+    location = /index.html { add_header Cache-Control "no-cache"; }
+    location = /links.js   { add_header Cache-Control "no-cache"; }
+
     location / { try_files $uri $uri/ /index.html; }
 }
