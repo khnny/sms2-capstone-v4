@@ -20,20 +20,10 @@ if (!$group) { $error = 'Your research group is not officially registered yet.';
 $groupId = (int) ($group['id'] ?? 0);
 if ($groupId > 0 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrfVerify()) { $error = 'Security check failed. Please refresh and try again.'; }
-    elseif (!fpIsRecommendedForFinalDefense($crad, $groupId)) { $error = 'Your adviser must recommend the group for Final Defense before manuscript submission.'; }
-    elseif (!isset($_FILES['manuscript_file'])) { $error = 'Please select the full Chapter 1-5 manuscript.'; }
     else {
-        $uploadSubdir = 'manuscripts/g' . $groupId;
-        $upload = smsSecureUpload($_FILES['manuscript_file'], ['subdir' => $uploadSubdir, 'max_bytes' => 20 * 1024 * 1024, 'allowed' => smsUploadAllowedDocuments(), 'required' => true]);
-        if (empty($upload['ok'])) { $error = (string) ($upload['error'] ?? 'Upload failed.'); }
-        else {
-            $latest = fpGetLatestManuscriptSubmission($crad, $groupId);
-            $version = (int) ($latest['version_number'] ?? 0) + 1;
-            $token = bin2hex(random_bytes(32));
-            $stmt = $crad->prepare("INSERT INTO `crad_manuscript_submissions` (research_group_id, version_number, status, submitted_by_user, submitted_by_name, submitted_by_email, submission_notes, original_name, stored_subdir, stored_name, file_size, file_mime, submission_token) VALUES (?, ?, 'Submitted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$groupId, $version, (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? ''), (string) ($_SESSION['user_email'] ?? ''), trim((string) ($_POST['submission_notes'] ?? '')), $upload['original_name'] ?? '', $uploadSubdir, $upload['stored_name'] ?? basename((string) ($upload['path'] ?? '')), (int) ($upload['size'] ?? 0), $upload['mime'] ?? '', $token]);
-            $message = 'Final manuscript version ' . $version . ' submitted for review.';
-        }
+        $result = fpSubmitManuscript($crad, $groupId, is_array($_FILES['manuscript_file'] ?? null) ? $_FILES['manuscript_file'] : [], trim((string) ($_POST['submission_notes'] ?? '')));
+        if (!empty($result['ok'])) { $message = 'Final manuscript version ' . (int) $result['version'] . ' submitted for review.'; }
+        else { $error = (string) ($result['error'] ?? 'Upload failed.'); }
     }
 }
 if ($groupId > 0) { $stmt = $crad->prepare('SELECT * FROM `crad_manuscript_submissions` WHERE research_group_id = ? ORDER BY version_number DESC'); $stmt->execute([$groupId]); $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: []; }

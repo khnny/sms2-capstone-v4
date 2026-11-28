@@ -12,6 +12,8 @@
  * Data:   GET  me, me/research, me/research/statement, me/research/members, me/research/timeline,
  *              me/research/submissions, me/research/feedback, me/defenses,
  *              me/clearance, me/notifications, announcements
+ * Actions: GET/POST me/research/chapters   (Chapter 1-3 upload, multipart)
+ *          GET/POST me/research/manuscript (final manuscript upload, multipart)
  * Ops:    GET  health
  *         POST internal/webhooks/run  (X-Cron-Token header, for web cron)
  *
@@ -266,6 +268,42 @@ try {
             require_once ROOT_PATH . '/includes/research-statement.php';
             apiData(smsResearchStatement(getCradDatabaseConnection(), $auth['user']));
 
+        case 'GET me/research/chapters':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            apiData(smsApiChapterState());
+
+        case 'POST me/research/chapters':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            $result = smsApiChapterSubmit(
+                (int) apiInputString('chapter_number'),
+                is_array($_FILES['document'] ?? null) ? $_FILES['document'] : [],
+                apiInputString('notes'),
+                apiInputString('submission_token')
+            );
+            if (empty($result['ok'])) {
+                apiError((int) $result['status'], (string) $result['error'], (string) $result['message']);
+            }
+            apiData($result);
+
+        case 'GET me/research/manuscript':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            apiData(smsApiManuscriptState());
+
+        case 'POST me/research/manuscript':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            $result = smsApiManuscriptSubmit(
+                is_array($_FILES['manuscript'] ?? null) ? $_FILES['manuscript'] : [],
+                apiInputString('notes')
+            );
+            if (empty($result['ok'])) {
+                apiError((int) $result['status'], (string) $result['error'], (string) $result['message']);
+            }
+            apiData($result);
+
         case 'GET me/research/members':
             $auth = apiRequireUser('student');
             apiData(smsApiGroupMembers(getCradDatabaseConnection(), $auth['user']));
@@ -307,7 +345,7 @@ try {
             apiData(smsWebhookRun());
     }
 
-    $known = ['health', 'auth/token', 'auth/mfa/email', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/members', 'me/research/timeline',
+    $known = ['health', 'auth/token', 'auth/mfa/email', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/chapters', 'me/research/manuscript', 'me/research/members', 'me/research/timeline',
         'me/research/submissions', 'me/research/feedback', 'me/defenses', 'me/clearance', 'me/notifications', 'announcements'];
     if (in_array($route, $known, true)) {
         apiError(405, 'method_not_allowed', 'Method not allowed for this endpoint.');
