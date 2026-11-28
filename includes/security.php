@@ -23,7 +23,9 @@ function smsSendSecurityHeaders(): void
     // A portal sign-in in progress (validated by login/sso-authorize.php) ends with a
     // redirect from the login form to that portal, so its origin must be an allowed
     // form-action or the browser stops on "Signing in...".
-    $formAction = "'self'";
+    // "Connect Google Drive" (backup/google-connect.php) is a form POST that
+    // redirects to Google's sign-in page, so Google's OAuth origin is allowed too.
+    $formAction = "'self' https://accounts.google.com";
     $ssoRedirect = (string) ($_SESSION['sso_pending']['redirect_uri'] ?? '');
     if ($ssoRedirect !== '') {
         $parts = parse_url($ssoRedirect);
