@@ -8,7 +8,7 @@ $grantDashboardMetrics = $grantDashboardMetrics ?? grantDashboardMetricsDefaults
 $grantDashboardAnalyticsUrl = BASE_URL . '/modules/crad/pages/dashboard-analytics.php';
 $grantDashboardMetricsHideLink = !empty($grantDashboardMetricsHideLink);
 ?>
-<link href="<?= BASE_URL ?>/assets/css/grant-dashboard-metrics.css?v=2" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/grant-dashboard-metrics.css?v=3" rel="stylesheet">
 
 <section class="glass-panel gdm-panel" data-grant-dashboard-metrics="1" aria-label="Grant dashboard metrics">
     <div class="glass-panel-body">

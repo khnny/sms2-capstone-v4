@@ -18,11 +18,11 @@
     --sms-primary-xlight:  #eaf2fb;
     --sms-accent:          #5595cf;
 
-    /* Status accents */
-    --sms-success:         #16a34a;
-    --sms-warning:         #d97706;
+    /* Status accents (each ≥ 4.5:1 on white so they work as text) */
+    --sms-success:         #15803d;
+    --sms-warning:         #b45309;
     --sms-danger:          #dc2626;
-    --sms-info:            #0284c7;
+    --sms-info:            #0369a1;
 
     /* Sidebar */
     --sms-sidebar-bg:      #ffffff;
@@ -53,7 +53,7 @@
     --sms-text:            #475467;
     --sms-text-strong:     #172b4d;
     --sms-text-muted:      #667085;
-    --sms-text-faint:      #98a2b3;
+    --sms-text-faint:      #6b7280; /* ≥ 4.5:1 on body-bg and surfaces */
     --sms-heading:         #172b4d;
 
     /* Elevation & chrome */
@@ -172,7 +172,7 @@
     --sms-text:            #cbd5e1;
     --sms-text-strong:     #f1f5f9;
     --sms-text-muted:      #94a3b8;
-    --sms-text-faint:      #64748b;
+    --sms-text-faint:      #8b9ab0; /* ≥ 4.5:1 on surface and surface-elevated */
     --sms-heading:         #f8fafc;
 
     --sms-border:          rgba(148,163,184,0.18);

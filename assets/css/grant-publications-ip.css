@@ -349,3 +349,86 @@
     color: #334155;
     line-height: 1.6;
 }
+
+/* ============================================================
+   Dark mode — remap the light-only literals above onto SMS tokens
+   ============================================================ */
+[data-theme="dark"] .gpip,
+[data-theme="dark"] .gpip-dialog {
+    --gpip-blue: var(--sms-primary);
+    --gpip-green: #6ee7b7;
+    --gpip-amber: #fde68a;
+    --gpip-red: #fca5a5;
+    --gpip-border: var(--sms-border);
+    --gpip-muted: var(--sms-text-muted);
+}
+[data-theme="dark"] .gpip-panel,
+[data-theme="dark"] .gpip-project-select,
+[data-theme="dark"] .gpip-dialog-box,
+[data-theme="dark"] .gpip-dialog-actions,
+[data-theme="dark"] .gpip-stat-card,
+[data-theme="dark"] .gpip-tranche-card,
+[data-theme="dark"] .gpip-item-summary,
+[data-theme="dark"] .gpip-btn-ghost {
+    background: var(--sms-surface) !important;
+    border-color: var(--sms-border) !important;
+    color: var(--sms-text) !important;
+}
+[data-theme="dark"] .gpip-stat,
+[data-theme="dark"] .gpip-summary-card,
+[data-theme="dark"] .gpip-table th,
+[data-theme="dark"] .gpip-requirement,
+[data-theme="dark"] .gpip-item,
+[data-theme="dark"] .gpip-verify-panel,
+[data-theme="dark"] .gpip-btn-ghost:hover {
+    background: var(--sms-surface-muted) !important;
+    border-color: var(--sms-border);
+}
+[data-theme="dark"] .gpip-page-header h1,
+[data-theme="dark"] .gpip-stat strong,
+[data-theme="dark"] .gpip-stat-body strong,
+[data-theme="dark"] .gpip-summary-card strong,
+[data-theme="dark"] .gpip-section-title,
+[data-theme="dark"] .gpip-panel-title,
+[data-theme="dark"] .gpip-item-head strong,
+[data-theme="dark"] .gpip-tranche-amount,
+[data-theme="dark"] .gpip-tranche-details strong { color: var(--sms-heading); }
+[data-theme="dark"] .gpip-project-bar label,
+[data-theme="dark"] .gpip-form label,
+[data-theme="dark"] .gpip-dialog-body label,
+[data-theme="dark"] .gpip-meta,
+[data-theme="dark"] .gpip-verify-list { color: var(--sms-text-strong); }
+[data-theme="dark"] .gpip-field-hint { color: var(--sms-text-muted); }
+[data-theme="dark"] .gpip-field-hint strong { color: #5eead4; }
+[data-theme="dark"] .gpip-alert { background: rgba(248, 113, 113, .14); color: #fca5a5; }
+[data-theme="dark"] .gpip-form input,
+[data-theme="dark"] .gpip-form select,
+[data-theme="dark"] .gpip-form textarea,
+[data-theme="dark"] .gpip-dialog-body input,
+[data-theme="dark"] .gpip-dialog-body select,
+[data-theme="dark"] .gpip-dialog-body textarea { background: var(--sms-input-bg); border-color: var(--sms-input-border); color: var(--sms-text-strong); }
+[data-theme="dark"] .gpip-live-badge { background: rgba(96, 165, 250, .18); border-color: rgba(96, 165, 250, .35); color: #93c5fd; }
+/* status pills and tinted panels */
+[data-theme="dark"] .gpip-status.completed,
+[data-theme="dark"] .gpip-status-badge.verified,
+[data-theme="dark"] .gpip-tranche-status.is-released { background: rgba(52, 211, 153, .16); color: #6ee7b7; border-color: rgba(52, 211, 153, .35); }
+[data-theme="dark"] .gpip-status.in-progress,
+[data-theme="dark"] .gpip-status-badge.ready,
+[data-theme="dark"] .gpip-status-badge.submitted { background: rgba(96, 165, 250, .18); color: #93c5fd; border-color: rgba(96, 165, 250, .35); }
+[data-theme="dark"] .gpip-status.pending,
+[data-theme="dark"] .gpip-status-badge.returned,
+[data-theme="dark"] .gpip-tranche-status.is-pending { background: rgba(251, 191, 36, .16); color: #fde68a; border-color: rgba(251, 191, 36, .35); }
+[data-theme="dark"] .gpip-status-badge.archived,
+[data-theme="dark"] .gpip-count-badge,
+[data-theme="dark"] .gpip-item-type { background: rgba(148, 163, 184, .14); color: #cbd5e1; border-color: rgba(148, 163, 184, .3); }
+[data-theme="dark"] .gpip-summary-card.archived,
+[data-theme="dark"] .gpip-summary-card.verified,
+[data-theme="dark"] .gpip-tranche-card.released,
+[data-theme="dark"] .gpip-repo-panel { background: rgba(52, 211, 153, .10) !important; border-color: rgba(52, 211, 153, .32) !important; }
+[data-theme="dark"] .gpip-tranche-card.pending,
+[data-theme="dark"] .gpip-return-alert,
+[data-theme="dark"] .gpip-requirement.warning { background: rgba(251, 191, 36, .10) !important; border-color: rgba(251, 191, 36, .32); }
+[data-theme="dark"] .gpip-requirement.action { background: rgba(96, 165, 250, .12) !important; border-color: rgba(96, 165, 250, .35); }
+[data-theme="dark"] .gpip-btn-edit { background: rgba(96, 165, 250, .14) !important; border-color: rgba(96, 165, 250, .35) !important; color: #93c5fd !important; }
+[data-theme="dark"] .gpip-btn-danger { background: var(--sms-surface); border-color: rgba(248, 113, 113, .4); }
+[data-theme="dark"] .gpip-btn-danger:hover { background: rgba(248, 113, 113, .14); }

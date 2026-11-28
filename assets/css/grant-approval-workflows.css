@@ -1,10 +1,11 @@
 /* CRAD Grant — Multi-Level Approval Pipeline */
 .gaw {
-    --gaw-green: #22c55e;
-    --gaw-green-dark: #16a34a;
-    --gaw-orange: #f97316;
-    --gaw-orange-dark: #ea580c;
-    --gaw-grey: #94a3b8;
+    /* Step circles carry white icons: keep them ≥ 3:1; status text ≥ 4.5:1 */
+    --gaw-green: #16a34a;
+    --gaw-green-dark: #15803d;
+    --gaw-orange: #ea580c;
+    --gaw-orange-dark: #c2410c;
+    --gaw-grey: #64748b;
     --gaw-line: #e2e8f0;
     --gaw-navy: #0f172a;
     --gaw-card-shadow: 0 1px 3px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .04);
@@ -228,12 +229,12 @@
 
 .gaw-step.queued .gaw-step-icon {
     border: 2px solid #e2e8f0;
-    color: #94a3b8;
+    color: #64748b;
     background: #f8fafc;
 }
 
 .gaw-step.queued .gaw-step-name {
-    color: #94a3b8;
+    color: #64748b;
 }
 
 .gaw-step.returned .gaw-step-icon {
@@ -267,7 +268,7 @@
 
 .gaw-step-date {
     font-size: .7rem;
-    color: #94a3b8;
+    color: #64748b;
     margin-top: .2rem;
     font-weight: 600;
 }
@@ -281,7 +282,7 @@
 }
 
 .gaw-step.active .gaw-step-date {
-    color: #94a3b8;
+    color: #64748b;
 }
 
 .gaw-action-panel {
@@ -449,7 +450,7 @@
     gap: .35rem;
     font-size: .72rem;
     font-weight: 700;
-    color: #16a34a;
+    color: #15803d;
     margin-left: .5rem;
 }
 
@@ -683,3 +684,76 @@
 .gre-detail-scores {
     margin: 0 0 1rem;
 }
+
+/* ============================================================
+   Dark mode — remap the light-only literals above onto SMS tokens
+   ============================================================ */
+[data-theme="dark"] .gaw {
+    --gaw-grey: var(--sms-text-muted);
+    --gaw-line: var(--sms-border);
+    --gaw-navy: var(--sms-heading);
+    --gaw-card-shadow: var(--sms-shadow-xs);
+}
+[data-theme="dark"] .gaw-project-bar,
+[data-theme="dark"] .gaw-project-select,
+[data-theme="dark"] .gaw-pipeline-card,
+[data-theme="dark"] .gaw-signature-box,
+[data-theme="dark"] .gaw-dashboard-item,
+[data-theme="dark"] .gaw-step-icon {
+    background: var(--sms-surface);
+    border-color: var(--sms-border);
+    color: var(--sms-text);
+}
+[data-theme="dark"] .gaw-signature-canvas-wrap { background: #ffffff; border-color: var(--sms-border); } /* signatures are drawn in ink: keep a white pad */
+[data-theme="dark"] .gaw-stat,
+[data-theme="dark"] .gaw-dashboard-empty,
+[data-theme="dark"] .gaw-monitor-score-pill {
+    background: var(--sms-surface-muted);
+    border-color: var(--sms-border);
+    color: var(--sms-text-muted);
+}
+[data-theme="dark"] .gaw-stat strong,
+[data-theme="dark"] .gaw-monitor-score-pill strong,
+[data-theme="dark"] .gaw-step-name,
+[data-theme="dark"] .gaw-step.active .gaw-step-name,
+[data-theme="dark"] .gaw-step.approved .gaw-step-name,
+[data-theme="dark"] .gaw-action-panel > p strong { color: var(--sms-heading); }
+[data-theme="dark"] .gaw-project-bar label,
+[data-theme="dark"] .gaw-project-select { color: var(--sms-text-strong); }
+[data-theme="dark"] .gaw-page-header p,
+[data-theme="dark"] .gaw-detail-empty,
+[data-theme="dark"] .gaw-step-date,
+[data-theme="dark"] .gaw-step.approved .gaw-step-date,
+[data-theme="dark"] .gaw-step.active .gaw-step-date,
+[data-theme="dark"] .gaw-action-panel > p,
+[data-theme="dark"] .gaw-dashboard-item-main span { color: var(--sms-text-muted); }
+[data-theme="dark"] .gaw-stat.pending,
+[data-theme="dark"] .gaw-dashboard-item-status.pending,
+[data-theme="dark"] .gaw-step.active .gaw-step-status { color: #fdba74; }
+[data-theme="dark"] .gaw-stat.completed,
+[data-theme="dark"] .gaw-dashboard-item-status.completed,
+[data-theme="dark"] .gaw-step.approved .gaw-step-status,
+[data-theme="dark"] .gaw-live-badge { color: #6ee7b7; }
+[data-theme="dark"] .gaw-step:not(:last-child)::after { background: var(--sms-border); }
+[data-theme="dark"] .gaw-step.approved:not(:last-child)::after { background: rgba(52, 211, 153, .55); }
+[data-theme="dark"] .gaw-step.active:not(:last-child)::after { background: linear-gradient(90deg, rgba(52, 211, 153, .55) 0%, var(--sms-border) 100%); }
+[data-theme="dark"] .gaw-step.queued .gaw-step-icon { background: var(--sms-surface-muted); border-color: var(--sms-border); color: var(--sms-text-muted); }
+[data-theme="dark"] .gaw-step.queued .gaw-step-name,
+[data-theme="dark"] .gaw-step.queued .gaw-step-status { color: var(--sms-text-muted); }
+[data-theme="dark"] .gaw-step.returned .gaw-step-icon { background: rgba(248, 113, 113, .16); border-color: rgba(248, 113, 113, .45); color: #fca5a5; }
+[data-theme="dark"] .gaw-step.returned .gaw-step-status { color: #fca5a5; }
+[data-theme="dark"] .gaw-action-panel,
+[data-theme="dark"] .gaw-monitor-note { background: rgba(96, 165, 250, .12); border-color: rgba(96, 165, 250, .32); color: #bfdbfe; }
+[data-theme="dark"] .gaw-action-panel h3,
+[data-theme="dark"] .gaw-monitor-note strong { color: #93c5fd; }
+[data-theme="dark"] .gaw-action-panel-warn { background: rgba(251, 146, 60, .12); border-color: rgba(251, 146, 60, .38); }
+[data-theme="dark"] .gaw-action-panel-warn h3 { color: #fdba74; }
+[data-theme="dark"] .gaw-return-audit-panel { background: rgba(248, 113, 113, .12); border-color: rgba(248, 113, 113, .38); }
+[data-theme="dark"] .gaw-return-audit-panel h3,
+[data-theme="dark"] .gaw-return-audit-lead,
+[data-theme="dark"] .gaw-return-audit-row span { color: #fca5a5; }
+[data-theme="dark"] .gaw-return-audit-row strong { color: #fee2e2; }
+[data-theme="dark"] .gaw-btn-return-outline { background: var(--sms-surface) !important; border-color: var(--sms-border) !important; color: var(--sms-text) !important; }
+[data-theme="dark"] .gaw-btn-return-outline:hover { background: var(--sms-surface-muted) !important; color: var(--sms-heading) !important; }
+[data-theme="dark"] .gaw-return-dialog textarea { background: var(--sms-input-bg); border-color: var(--sms-input-border); color: var(--sms-text-strong); }
+[data-theme="dark"] .gaw-dashboard-item:hover { border-color: rgba(96, 165, 250, .45); }

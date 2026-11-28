@@ -54,7 +54,7 @@ if ($crad) {
 require_once ROOT_PATH . '/includes/layout-start.php';
 renderBreadcrumbs($breadcrumbs);
 ?>
-<link href="<?= BASE_URL ?>/assets/css/grant-project-milestones.css?v=4" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/grant-project-milestones.css?v=5" rel="stylesheet">
 
 <?php if ($dbError !== ''): ?>
 <div class="gpm-alert" role="alert"><?= smsIcon('exclamation-triangle', ['class' => 'me-1']) ?><?= $dbError ?></div>
