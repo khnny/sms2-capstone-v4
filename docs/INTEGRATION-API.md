@@ -77,8 +77,22 @@ Base: `<SMS2>/api/v1/` (with mod_rewrite) or `<SMS2>/api/v1/index.php/` (always 
 |---|---|---|
 | `POST auth/token` | `grant_type=authorization_code`, `code`, `redirect_uri` | `access_token`, `token_type`, `expires_in`, `refresh_token`, `user` |
 | `POST auth/token` | `grant_type=refresh_token`, `refresh_token` | same, with a new refresh token |
+| `POST auth/token` | `grant_type=password`, `username`, `password`, `client_ip` (the visitor's IP) | same as above, or `{"mfa_required":true,"mfa_token":"…","methods":["authenticator","email"],"expires_in":600}` when the account has an Authenticator |
+| `POST auth/token` | `grant_type=mfa_code`, `mfa_token`, `method` (`authenticator` or `email`), `code`, `client_ip` | same as the first row |
+| `POST auth/mfa/email` | `mfa_token`, `client_ip` | `{"data":{"sent_to":"ju****@bestlink.edu.ph"}}` (emails a 6-digit login code) |
 | `POST auth/revoke` | `refresh_token` | `{"data":{"revoked":true}}` |
 | `POST auth/ticket` (Bearer) | `path=/modules/student-portal/pages/submit-chapters.php` | `{"data":{"url":"…/login/sso-launch.php?ticket=…","expires_in":60}}` |
+
+#### App login page (password grant)
+
+The Student Portal has its own login form. It never stores passwords: it sends what the student typed
+server-to-server to `auth/token` with its client secret, and SMS 2 checks it with the same code as the
+SMS 2 login page (`smsLoginAttempt`): failed-attempt lockout, per-IP throttle (using `client_ip`),
+inactive accounts and audit logs all apply. Students with an Authenticator get an `mfa_token` (10 minutes)
+and finish with `grant_type=mfa_code`; wrong codes are counted per challenge. Errors: `invalid_grant`
+(wrong login, message says attempts left), `locked` (423), `inactive`, `access_denied` (not a student),
+`password_change_required` (sign in on SMS 2 once to set a new password), `maintenance` (503),
+`invalid_code`, `mfa_expired`, `mfa_locked`.
 
 ### Data (Bearer access token; the `me/research…`, `me/defenses` and `me/clearance` endpoints are for students only)
 
