@@ -304,6 +304,51 @@ try {
             }
             apiData($result);
 
+        // More CRAD steps the Student Portal does in place (rules: includes/student-actions-api.php).
+        case 'GET me/research/group':
+        case 'GET me/research/title':
+        case 'GET me/research/progress':
+        case 'GET me/research/panel':
+        case 'GET me/research/payment':
+        case 'GET me/research/clearance-form':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            apiData(match ($route) {
+                'me/research/group' => smsApiGroupState(),
+                'me/research/title' => smsApiTitleState(),
+                'me/research/progress' => smsApiProgressState(),
+                'me/research/panel' => smsApiPanelState(),
+                'me/research/payment' => smsApiPaymentState(),
+                'me/research/clearance-form' => smsApiClearanceFormState(),
+            });
+
+        case 'POST me/research/group':
+        case 'POST me/research/title':
+        case 'POST me/research/progress':
+        case 'POST me/research/panel':
+        case 'POST me/research/payment':
+        case 'POST me/research/clearance-form':
+            apiRequireUser('student');
+            require_once ROOT_PATH . '/includes/student-actions-api.php';
+            $in = apiInput();
+            $file = static fn(string $field): array => is_array($_FILES[$field] ?? null) ? $_FILES[$field] : [];
+            $result = match ($route) {
+                'me/research/group' => smsApiGroupSubmit(
+                    array_values(array_filter(is_array($in['members'] ?? null) ? $in['members'] : [], 'is_array')),
+                    apiInputString('incomplete_reason'),
+                    apiInputString('action') !== 'draft'
+                ),
+                'me/research/title' => smsApiTitleSubmit(array_map(static fn($v) => is_scalar($v) ? trim((string) $v) : '', $in)),
+                'me/research/progress' => smsApiProgressSubmit(array_map(static fn($v) => is_scalar($v) ? trim((string) $v) : '', $in), $file('document')),
+                'me/research/panel' => smsApiPanelSubmit(apiInputString('action'), array_map(static fn($v) => is_scalar($v) ? (string) $v : '', $in), $file('document')),
+                'me/research/payment' => smsApiPaymentSubmit(apiInputString('stage'), $file('payment_file'), apiInputString('or_number')),
+                'me/research/clearance-form' => smsApiClearanceFormSubmit((int) apiInputString('id'), $file('clearance_file')),
+            };
+            if (empty($result['ok'])) {
+                apiError((int) $result['status'], (string) $result['error'], (string) $result['message']);
+            }
+            apiData($result);
+
         case 'GET me/research/members':
             $auth = apiRequireUser('student');
             apiData(smsApiGroupMembers(getCradDatabaseConnection(), $auth['user']));
@@ -346,6 +391,7 @@ try {
     }
 
     $known = ['health', 'auth/token', 'auth/mfa/email', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/chapters', 'me/research/manuscript', 'me/research/members', 'me/research/timeline',
+        'me/research/group', 'me/research/title', 'me/research/progress', 'me/research/panel', 'me/research/payment', 'me/research/clearance-form',
         'me/research/submissions', 'me/research/feedback', 'me/defenses', 'me/clearance', 'me/notifications', 'announcements'];
     if (in_array($route, $known, true)) {
         apiError(405, 'method_not_allowed', 'Method not allowed for this endpoint.');
