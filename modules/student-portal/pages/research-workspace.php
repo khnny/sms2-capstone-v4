@@ -56,5 +56,5 @@ renderBreadcrumbs($breadcrumbs);
     <?= $hubHtml ?>
 <?php endif; ?>
 
-<script src="<?= BASE_URL ?>/assets/js/research-hub.js?v=1" defer></script>
+<script src="<?= BASE_URL ?>/assets/js/research-hub.js?v=2" defer></script>
 <?php require_once ROOT_PATH . '/includes/layout-end.php'; ?>

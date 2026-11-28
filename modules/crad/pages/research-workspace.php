@@ -287,8 +287,42 @@ $renderWorkspaceTabs = static function (string $prefix, array $tabs) use ($url, 
     <?php
 };
 
+// CRAD Officers and Research Coordinators get the one-page Work Hub.
+$workHubHtml = '';
+if (($isCradOfficer || $isCoordinator) && !$isDepartmentHead && ($_GET['view'] ?? '') !== 'classic') {
+    try {
+        require_once ROOT_PATH . '/modules/crad/config/config.php';
+        require_once ROOT_PATH . '/includes/crad-work-hub.php';
+        $hubPdo = getCradDatabaseConnection();
+        $hubData = $isCradOfficer
+            ? cwhCradOfficerData($hubPdo)
+            : cwhCoordinatorData($hubPdo, (int) ($_SESSION['user_id'] ?? 0), (string) getCurrentUserName());
+        $workHubHtml = cwhRender($hubData);
+        $pageBannerDescription = 'Everything waiting on you, on one page. Review buttons open in a pop-up.';
+    } catch (Throwable $hubError) {
+        error_log('CRAD work hub: ' . $hubError->getMessage());
+        $workHubHtml = '';
+    }
+}
+
 require_once ROOT_PATH . '/includes/layout-start.php';
+if ($workHubHtml !== '') {
+    // The hub's banner replaces the page banner and the generic dashboard widgets.
+    $hideModulePageBanner = true;
+    $isRoleDashboardHome = false;
+}
 renderBreadcrumbs($breadcrumbs);
+if ($workHubHtml !== '') {
+    ?>
+<link href="<?= BASE_URL ?>/assets/css/research-hub.css?v=2" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/work-hub.css?v=1" rel="stylesheet">
+<?= $workHubHtml ?>
+<div class="cwh-announcements mt-3"><?php require ROOT_PATH . '/communication/dashboard-announcements.php'; ?></div>
+<script src="<?= BASE_URL ?>/assets/js/research-hub.js?v=2" defer></script>
+    <?php
+    require_once ROOT_PATH . '/includes/layout-end.php';
+    exit;
+}
 ?>
 <div class="sms-role-workspace sms-crad-workspace">
     <header class="sms-role-workspace-header" aria-labelledby="workspace-heading">
