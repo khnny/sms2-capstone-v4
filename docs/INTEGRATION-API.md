@@ -111,6 +111,20 @@ and finish with `grant_type=mfa_code`; wrong codes are counted per challenge. Er
 | `GET announcements` | Published announcements for the user's role |
 | `GET health` | `{"ok":true}` |
 
+### Student actions (Bearer access token, students only)
+
+These use the same rules as the SMS 2 student pages (adviser approval, chapter order,
+revision gate, Final Defense recommendation, file type and size checks, notifications).
+Uploads are `multipart/form-data`. A rule that blocks the action answers `422` (or `409`)
+with `{"error":{"code":"not_submitted","message":"…"}}`; show the message to the student.
+
+| Path | Body | Result |
+|---|---|---|
+| `GET me/research/chapters` | | `available`, `message`, `group_number`, `max_mb`, `chapters` (number, label, `can_submit`, `next_version`, `reason`, `latest`) |
+| `POST me/research/chapters` | `chapter_number` (1-3), `document` (file, max 10 MB), `notes`, `submission_token` (64 hex chars, new per form; blocks double submits) | `version`, `submission_id` |
+| `GET me/research/manuscript` | | `available`, `eligible`, `can_submit`, `message`, `max_mb`, `submissions` (version, status, file name, dates) |
+| `POST me/research/manuscript` | `manuscript` (file, max 20 MB), `notes` | `version`, `submission_id`. Refused while the latest version is not returned for revision. |
+
 Example:
 
 ```

@@ -358,6 +358,36 @@ function fpGetLatestManuscriptSubmission(PDO $crad, int $groupId): ?array
     $stmt->execute([$groupId]); $row = $stmt->fetch(PDO::FETCH_ASSOC); return $row ?: null;
 }
 
+/**
+ * Store a new final manuscript version for a group (used by the SMS 2 page and the API).
+ * The caller has already checked who the student is; this checks eligibility and the file.
+ *
+ * @return array{ok: bool, error?: string, version?: int, submission_id?: int}
+ */
+function fpSubmitManuscript(PDO $crad, int $groupId, array $file, string $notes): array
+{
+    finalPhaseEnsureSchema($crad);
+    if ($groupId <= 0) {
+        return ['ok' => false, 'error' => 'Your research group is not officially registered yet.'];
+    }
+    if (!fpIsRecommendedForFinalDefense($crad, $groupId)) {
+        return ['ok' => false, 'error' => 'Your adviser must recommend the group for Final Defense before manuscript submission.'];
+    }
+    if (empty($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return ['ok' => false, 'error' => 'Please select the full Chapter 1-5 manuscript.'];
+    }
+    $uploadSubdir = 'manuscripts/g' . $groupId;
+    $upload = smsSecureUpload($file, ['subdir' => $uploadSubdir, 'max_bytes' => 20 * 1024 * 1024, 'allowed' => smsUploadAllowedDocuments(), 'required' => true]);
+    if (empty($upload['ok'])) {
+        return ['ok' => false, 'error' => (string) ($upload['error'] ?? 'Upload failed.')];
+    }
+    $latest = fpGetLatestManuscriptSubmission($crad, $groupId);
+    $version = (int) ($latest['version_number'] ?? 0) + 1;
+    $stmt = $crad->prepare("INSERT INTO `crad_manuscript_submissions` (research_group_id, version_number, status, submitted_by_user, submitted_by_name, submitted_by_email, submission_notes, original_name, stored_subdir, stored_name, file_size, file_mime, submission_token) VALUES (?, ?, 'Submitted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$groupId, $version, (int) ($_SESSION['user_id'] ?? 0), (string) ($_SESSION['user_name'] ?? $_SESSION['full_name'] ?? $_SESSION['username'] ?? ''), (string) ($_SESSION['user_email'] ?? ''), $notes, $upload['original_name'] ?? '', $uploadSubdir, $upload['stored_name'] ?? basename((string) ($upload['path'] ?? '')), (int) ($upload['size'] ?? 0), $upload['mime'] ?? '', bin2hex(random_bytes(32))]);
+    return ['ok' => true, 'version' => $version, 'submission_id' => (int) $crad->lastInsertId()];
+}
+
 function fpGetManuscriptEvaluation(PDO $crad, int $submissionId): ?array
 {
     finalPhaseEnsureSchema($crad);
