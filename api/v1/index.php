@@ -5,7 +5,8 @@
  * Base URL: <SMS2>/api/v1/   (also works as <SMS2>/api/v1/index.php/<route>
  * or <SMS2>/api/v1/index.php?route=<route> when mod_rewrite is off)
  *
- * Auth:   POST auth/token   (code or refresh token -> JWT access token)
+ * Auth:   POST auth/token   (code, refresh token, or password + 2FA code -> JWT access token)
+ *         POST auth/mfa/email (email a login code while a password sign-in waits for 2FA)
  *         POST auth/revoke  (log out: revoke a refresh token)
  *         POST auth/ticket  (one-time link that opens an SMS 2 page, same user)
  * Data:   GET  me, me/research, me/research/statement, me/research/members, me/research/timeline,
@@ -192,6 +193,24 @@ try {
                 }
                 apiRespond(200, smsApiIssueTokens($client, $result['user']));
             }
+            if ($grant === 'password' || $grant === 'mfa_code') {
+                // The app's own login page. The app sends its visitor's IP so the
+                // per-IP login throttle applies to the student, not to the app server.
+                $visitorIp = apiInputString('client_ip');
+                if ($visitorIp !== '' && filter_var($visitorIp, FILTER_VALIDATE_IP)) {
+                    $_SERVER['REMOTE_ADDR'] = $visitorIp;
+                }
+                $result = $grant === 'password'
+                    ? smsApiPasswordLogin($client, apiInputString('username'), (is_scalar(apiInput()['password'] ?? null) ? (string) apiInput()['password'] : ''))
+                    : smsApiMfaVerify($client, apiInputString('mfa_token'), apiInputString('method'), apiInputString('code'));
+                if (!empty($result['mfa'])) {
+                    apiRespond(200, ['mfa_required' => true] + $result['mfa']);
+                }
+                if (empty($result['ok'])) {
+                    apiError((int) $result['status'], (string) $result['error'], (string) $result['message']);
+                }
+                apiRespond(200, smsApiIssueTokens($client, $result['user']));
+            }
             if ($grant === 'refresh_token') {
                 $result = smsApiRefreshTokens($client, apiInputString('refresh_token'));
                 if (!$result['ok']) {
@@ -199,7 +218,19 @@ try {
                 }
                 apiRespond(200, $result['tokens']);
             }
-            apiError(400, 'unsupported_grant_type', 'grant_type must be authorization_code or refresh_token.');
+            apiError(400, 'unsupported_grant_type', 'grant_type must be authorization_code, refresh_token, password or mfa_code.');
+
+        case 'POST auth/mfa/email':
+            $client = apiAuthenticateClient();
+            $visitorIp = apiInputString('client_ip');
+            if ($visitorIp !== '' && filter_var($visitorIp, FILTER_VALIDATE_IP)) {
+                $_SERVER['REMOTE_ADDR'] = $visitorIp;
+            }
+            $result = smsApiMfaSendEmail($client, apiInputString('mfa_token'));
+            if (empty($result['ok'])) {
+                apiError((int) $result['status'], (string) $result['error'], (string) $result['message']);
+            }
+            apiData(['sent_to' => $result['sent_to']]);
 
         case 'POST auth/revoke':
             $client = apiAuthenticateClient();
@@ -276,7 +307,7 @@ try {
             apiData(smsWebhookRun());
     }
 
-    $known = ['health', 'auth/token', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/members', 'me/research/timeline',
+    $known = ['health', 'auth/token', 'auth/mfa/email', 'auth/revoke', 'auth/ticket', 'me', 'me/research', 'me/research/statement', 'me/research/members', 'me/research/timeline',
         'me/research/submissions', 'me/research/feedback', 'me/defenses', 'me/clearance', 'me/notifications', 'announcements'];
     if (in_array($route, $known, true)) {
         apiError(405, 'method_not_allowed', 'Method not allowed for this endpoint.');

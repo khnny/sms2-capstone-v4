@@ -8,6 +8,9 @@
  *   - Tokens:  POST api/v1/auth/token swaps the code (server-to-server, with
  *              the client secret) for a short-lived JWT access token and a
  *              rotating refresh token.
+ *   - Portal login form: POST api/v1/auth/token with grant_type=password lets a
+ *              trusted app show its own login page. The password is still checked
+ *              here, with the same lockout and Authenticator rules (smsApiPasswordLogin).
  *   - SSO:     POST api/v1/auth/ticket + login/sso-launch.php opens an existing SMS 2
  *              page for the same user without a second login.
  *   - Webhooks: includes/webhooks.php.
@@ -26,6 +29,9 @@ const SMS_API_ACCESS_TTL = 900;            // 15 minutes
 const SMS_API_REFRESH_TTL = 8 * 3600;      // 8 hours, rotated on every use
 const SMS_API_CODE_TTL = 60;               // one-time login code
 const SMS_API_TICKET_TTL = 60;             // one-time SSO ticket
+const SMS_API_MFA_TTL = 600;               // password OK, waiting for the 2FA code
+const SMS_API_MFA_MAX_EMAILS = 3;          // email codes per sign-in attempt
+const SMS_API_MFA_EMAIL_COOLDOWN = 60;     // seconds between email codes
 
 function smsIntegrationJwtSecret(): string
 {
@@ -134,6 +140,22 @@ function smsIntegrationEnsureSchema(PDO $pdo): void
             `created_at` datetime NOT NULL DEFAULT current_timestamp(),
             PRIMARY KEY (`id`),
             UNIQUE KEY `uq_api_ticket_hash` (`ticket_hash`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+        "CREATE TABLE IF NOT EXISTS `sms2_api_mfa_challenges` (
+            `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `token_hash` char(64) NOT NULL,
+            `client_id` varchar(80) NOT NULL,
+            `user_id` int(10) unsigned NOT NULL,
+            `login_name` varchar(190) NOT NULL DEFAULT '',
+            `attempts` int(10) unsigned NOT NULL DEFAULT 0,
+            `email_sends` int(10) unsigned NOT NULL DEFAULT 0,
+            `last_email_at` datetime DEFAULT NULL,
+            `expires_at` datetime NOT NULL,
+            `used_at` datetime DEFAULT NULL,
+            `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+            PRIMARY KEY (`id`),
+            UNIQUE KEY `uq_api_mfa_hash` (`token_hash`),
+            KEY `idx_api_mfa_expires` (`expires_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
     foreach ($statements as $sql) {
@@ -553,4 +575,189 @@ function smsApiConsumeSsoTicket(string $rawTicket): ?array
         return null;
     }
     return ['user' => $user, 'next_path' => (string) $row['next_path']];
+}
+
+/* ------------------------------------------------- app login form (password grant) */
+
+/**
+ * Check a student's SMS 2 password for a trusted app's own login page.
+ * Uses smsLoginAttempt(), so lockout, IP throttle and audit logs are the same
+ * as the SMS 2 login page. When the account has an Authenticator, a short-lived
+ * challenge is returned instead and smsApiMfaVerify() finishes the sign-in.
+ *
+ * @return array{ok: bool, user?: array, mfa?: array, status?: int, error?: string, message?: string}
+ */
+function smsApiPasswordLogin(array $client, string $login, string $password): array
+{
+    require_once __DIR__ . '/module-controls.php';
+    if (smsIsSystemInMaintenance()) {
+        return ['ok' => false, 'status' => 503, 'error' => 'maintenance', 'message' => 'SMS 2 is under maintenance. Please try again later.'];
+    }
+    $login = trim($login);
+    if ($login === '' || $password === '' || strlen($login) > 190 || strlen($password) > 1024) {
+        return ['ok' => false, 'status' => 400, 'error' => 'invalid_request', 'message' => 'Please enter your email or student number and password.'];
+    }
+
+    $result = smsLoginAttempt($login, $password);
+    unset($_SESSION['pending_2fa']);
+
+    if (!empty($result['needs_2fa']) || ($result['code'] ?? '') === 'needs_2fa') {
+        $row = smsFindUserByLogin($login);
+        $user = $row ? smsApiLoadUser((int) $row['id']) : null;
+        if (!$user || !smsApiClientAllowsRole($client, (string) $user['role_key'])) {
+            return smsApiPasswordLoginDenied($client, $row);
+        }
+        return ['ok' => false, 'mfa' => smsApiCreateMfaChallenge($client, (int) $user['id'], $login)];
+    }
+
+    if (empty($result['ok'])) {
+        $locked = !empty($result['locked']);
+        return [
+            'ok' => false,
+            'status' => $locked ? 423 : (($result['code'] ?? '') === 'inactive' ? 403 : 400),
+            'error' => $locked ? 'locked' : ((($result['code'] ?? '') === 'inactive') ? 'inactive' : 'invalid_grant'),
+            'message' => (string) ($result['message'] ?? 'Sign in failed.'),
+        ];
+    }
+
+    return smsApiPasswordLoginFinish($client, (int) ($_SESSION['user_id'] ?? 0));
+}
+
+/** Common checks once the password (and code, when needed) are correct. */
+function smsApiPasswordLoginFinish(array $client, int $userId): array
+{
+    $user = $userId > 0 ? smsApiLoadUser($userId) : null;
+    if (!$user || !smsApiClientAllowsRole($client, (string) $user['role_key'])) {
+        return smsApiPasswordLoginDenied($client, $user);
+    }
+    if (!empty($_SESSION['must_change_password'])) {
+        return [
+            'ok' => false, 'status' => 403, 'error' => 'password_change_required',
+            'message' => 'You need to set a new password first. Sign in once on SMS 2 to change it, then come back here.',
+        ];
+    }
+    logActivity('sso', 'Signed in to ' . (string) $client['name'] . ' (app login page)', 'System', (int) $user['id'], (string) $user['full_name'], (string) $user['role_key'], false);
+    return ['ok' => true, 'user' => $user];
+}
+
+function smsApiPasswordLoginDenied(array $client, ?array $user): array
+{
+    if ($user) {
+        logActivity('sso', 'Sign-in to ' . (string) $client['name'] . ' refused: role not allowed', 'System', (int) $user['id'], (string) ($user['full_name'] ?? ''), (string) ($user['role_key'] ?? ''), false);
+    }
+    return ['ok' => false, 'status' => 403, 'error' => 'access_denied', 'message' => 'This portal is for student accounts only. Staff and faculty should use SMS 2 directly.'];
+}
+
+/** @return array{mfa_token: string, methods: list<string>, expires_in: int} */
+function smsApiCreateMfaChallenge(array $client, int $userId, string $login): array
+{
+    $raw = smsIntegrationRandomToken(32);
+    $pdo = smsIntegrationDb();
+    $pdo->exec('DELETE FROM `sms2_api_mfa_challenges` WHERE expires_at < (NOW() - INTERVAL 1 DAY)');
+    $pdo->prepare(
+        'INSERT INTO `sms2_api_mfa_challenges` (token_hash, client_id, user_id, login_name, expires_at)
+         VALUES (?, ?, ?, ?, NOW() + INTERVAL ' . SMS_API_MFA_TTL . ' SECOND)'
+    )->execute([smsIntegrationHash($raw), (string) $client['client_id'], $userId, substr($login, 0, 190)]);
+    return ['mfa_token' => $raw, 'methods' => ['authenticator', 'email'], 'expires_in' => SMS_API_MFA_TTL];
+}
+
+function smsApiFindMfaChallenge(array $client, string $rawToken): ?array
+{
+    if ($rawToken === '' || strlen($rawToken) > 200) {
+        return null;
+    }
+    $stmt = smsIntegrationDb()->prepare(
+        'SELECT *, TIMESTAMPDIFF(SECOND, last_email_at, NOW()) AS email_age FROM `sms2_api_mfa_challenges`
+         WHERE token_hash = ? AND client_id = ? AND used_at IS NULL AND expires_at >= NOW() LIMIT 1'
+    );
+    $stmt->execute([smsIntegrationHash($rawToken), (string) $client['client_id']]);
+    $row = $stmt->fetch();
+    return $row ?: null;
+}
+
+/**
+ * Finish a sign-in that needs a code: Authenticator (method=authenticator) or email OTP (method=email).
+ * Wrong codes are counted on the challenge; after the limit the challenge is closed.
+ */
+function smsApiMfaVerify(array $client, string $rawToken, string $method, string $code): array
+{
+    require_once __DIR__ . '/totp.php';
+    $challenge = smsApiFindMfaChallenge($client, $rawToken);
+    if (!$challenge) {
+        return ['ok' => false, 'status' => 400, 'error' => 'mfa_expired', 'message' => 'Your sign-in expired. Please enter your password again.'];
+    }
+    $max = smsCodeChallengeMaxAttempts();
+    if ((int) $challenge['attempts'] >= $max) {
+        return ['ok' => false, 'status' => 423, 'error' => 'mfa_locked', 'message' => 'Too many wrong codes. Please enter your password again.'];
+    }
+    $userId = (int) $challenge['user_id'];
+    $code = preg_replace('/\s+/', '', $code) ?? '';
+    $ok = $method === 'email'
+        ? smsVerifyOtp($userId, 'login_2fa', $code)
+        : (preg_match('/^\d{6}$/', $code) === 1 && smsAuthenticatorVerifyLogin($userId, $code));
+
+    $pdo = smsIntegrationDb();
+    if (!$ok) {
+        $pdo->prepare('UPDATE `sms2_api_mfa_challenges` SET attempts = attempts + 1 WHERE id = ?')->execute([(int) $challenge['id']]);
+        $left = max(0, $max - ((int) $challenge['attempts'] + 1));
+        if ($left === 0) {
+            $pdo->prepare('UPDATE `sms2_api_mfa_challenges` SET used_at = NOW() WHERE id = ?')->execute([(int) $challenge['id']]);
+            return ['ok' => false, 'status' => 423, 'error' => 'mfa_locked', 'message' => 'Too many wrong codes. Please enter your password again.'];
+        }
+        return ['ok' => false, 'status' => 400, 'error' => 'invalid_code', 'message' => 'Wrong code. ' . $left . ' attempt' . ($left === 1 ? '' : 's') . ' left.'];
+    }
+
+    $close = $pdo->prepare('UPDATE `sms2_api_mfa_challenges` SET used_at = NOW() WHERE id = ? AND used_at IS NULL');
+    $close->execute([(int) $challenge['id']]);
+    if ($close->rowCount() !== 1) {
+        return ['ok' => false, 'status' => 400, 'error' => 'mfa_expired', 'message' => 'Your sign-in expired. Please enter your password again.'];
+    }
+
+    $stmt = db()->prepare(
+        'SELECT u.*, COALESCE(r.label, u.role_key) AS role_label
+         FROM `sms2_users` u LEFT JOIN `sms2_roles` r ON r.role_key = u.role_key WHERE u.id = ? LIMIT 1'
+    );
+    $stmt->execute([$userId]);
+    $row = $stmt->fetch();
+    if (!$row) {
+        return smsApiPasswordLoginDenied($client, null);
+    }
+    smsCompleteLoginSession($row, (string) $challenge['login_name']);
+    return smsApiPasswordLoginFinish($client, $userId);
+}
+
+/** Email a login code for a waiting challenge (limited per challenge). */
+function smsApiMfaSendEmail(array $client, string $rawToken): array
+{
+    $challenge = smsApiFindMfaChallenge($client, $rawToken);
+    if (!$challenge) {
+        return ['ok' => false, 'status' => 400, 'error' => 'mfa_expired', 'message' => 'Your sign-in expired. Please enter your password again.'];
+    }
+    if ((int) $challenge['email_sends'] >= SMS_API_MFA_MAX_EMAILS) {
+        return ['ok' => false, 'status' => 429, 'error' => 'too_many_requests', 'message' => 'Too many code requests. Please enter your password again later.'];
+    }
+    if ($challenge['email_age'] !== null) {
+        // Age comes from the database clock, so PHP and MySQL time zones may differ safely.
+        $wait = SMS_API_MFA_EMAIL_COOLDOWN - (int) $challenge['email_age'];
+        if ($wait > 0) {
+            return ['ok' => false, 'status' => 429, 'error' => 'too_many_requests', 'message' => 'Please wait ' . smsFormatDuration($wait) . ' before requesting another code.'];
+        }
+    }
+    smsIntegrationDb()->prepare('UPDATE `sms2_api_mfa_challenges` SET email_sends = email_sends + 1, last_email_at = NOW() WHERE id = ?')
+        ->execute([(int) $challenge['id']]);
+    $issued = smsIssueOtpToEmail((int) $challenge['user_id'], 'login_2fa', 'System', SMS2_OTP_TTL_MINUTES, 'login verification');
+    if (empty($issued['ok']) || empty($issued['emailed'])) {
+        error_log('Portal login email OTP failed: ' . (string) ($issued['error'] ?? ''));
+        return ['ok' => false, 'status' => 502, 'error' => 'email_failed', 'message' => 'We could not email a code right now. Use your Authenticator app or try again later.'];
+    }
+    return ['ok' => true, 'sent_to' => smsApiMaskEmail((string) $issued['to'])];
+}
+
+function smsApiMaskEmail(string $email): string
+{
+    if (!str_contains($email, '@')) {
+        return '';
+    }
+    [$local, $domain] = explode('@', $email, 2);
+    return substr($local, 0, 2) . str_repeat('*', max(1, strlen($local) - 2)) . '@' . $domain;
 }

@@ -102,3 +102,20 @@ CREATE TABLE IF NOT EXISTS `sms2_webhook_deliveries` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 ;
 
+CREATE TABLE IF NOT EXISTS `sms2_api_mfa_challenges` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `token_hash` char(64) NOT NULL,
+  `client_id` varchar(80) NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
+  `login_name` varchar(190) NOT NULL DEFAULT '',
+  `attempts` int(10) unsigned NOT NULL DEFAULT 0,
+  `email_sends` int(10) unsigned NOT NULL DEFAULT 0,
+  `last_email_at` datetime DEFAULT NULL,
+  `expires_at` datetime NOT NULL,
+  `used_at` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_api_mfa_hash` (`token_hash`),
+  KEY `idx_api_mfa_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+;
