@@ -157,6 +157,11 @@ if (($_GET['ajax'] ?? '') === 'title-approval-approve' && $_SERVER['REQUEST_METH
     header('Content-Type: application/json; charset=utf-8');
     try {
         $body = json_decode((string) file_get_contents('php://input'), true) ?: [];
+        if (!csrfVerify((string) ($body['csrf_token'] ?? ''))) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'Security check failed. Refresh the page and try again.']);
+            exit;
+        }
         $id = (int) ($body['id'] ?? 0);
         $ok = ($body['action'] ?? '') === 'reject'
             ? rpTitleApprovalReject($id)
@@ -572,7 +577,8 @@ require_once __DIR__ . '/../../../includes/layout-start.php';
     <section class="rp-card"
              data-crad-ta-card
              data-endpoint="<?= htmlspecialchars(BASE_URL . '/modules/crad/pages/register-proposal.php?ajax=title-approvals') ?>"
-             data-update="<?= htmlspecialchars(BASE_URL . '/modules/crad/pages/register-proposal.php?ajax=title-approval-approve') ?>">
+             data-update="<?= htmlspecialchars(BASE_URL . '/modules/crad/pages/register-proposal.php?ajax=title-approval-approve') ?>"
+             data-csrf="<?= htmlspecialchars(csrfToken()) ?>">
         <div class="rp-card-head">
             <div class="rp-card-title">
                 <h2><?= smsIcon('file-signature') ?> Title Approval for CRAD Officer Review <span id="cradTaPending" class="rp-status rp-status-pending"><?= (int) $titleApprovalPayload['pending'] ?></span></h2>
@@ -1053,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
             credentials: 'same-origin',
-            body: JSON.stringify({id: activeId, crad_signature_data: signatureData})
+            body: JSON.stringify({csrf_token: card.dataset.csrf || '', id: activeId, crad_signature_data: signatureData})
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Could not save CRAD officer approval.');
@@ -1070,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
             credentials: 'same-origin',
-            body: JSON.stringify({id: activeId, action: 'reject'})
+            body: JSON.stringify({csrf_token: card.dataset.csrf || '', id: activeId, action: 'reject'})
         });
         const data = await res.json();
         if (!data.ok) throw new Error(data.error || 'Could not save CRAD officer rejection.');

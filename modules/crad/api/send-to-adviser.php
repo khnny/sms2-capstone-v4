@@ -40,6 +40,10 @@ if (!is_array($body)) {
     http_response_code(400);
     saJson(false, 'Invalid JSON body.');
 }
+if (!csrfVerify((string) ($body['csrf_token'] ?? ''))) {
+    http_response_code(403);
+    saJson(false, 'Security check failed. Refresh the page and try again.');
+}
 
 $studentId     = trim((string) ($body['student_id']       ?? ''));
 $studentUserId = isset($body['student_user_id']) && $body['student_user_id'] !== ''
