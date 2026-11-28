@@ -27,6 +27,16 @@
 // because storage/keys/app.key is excluded from the Docker build context.
 // define('SMS2_APP_KEY', '');
 
+// --- Google Drive data backup (see docs/DATA-BACKUP.md) ---
+// Easiest: save the OAuth client JSON from Google Cloud as
+// storage/keys/google-oauth-client.json (gitignored). Or define these here:
+// define('SMS2_GDRIVE_CLIENT_ID', 'xxxxxxxx.apps.googleusercontent.com');
+// define('SMS2_GDRIVE_CLIENT_SECRET', 'GOCSPX-xxxxxxxx');
+// Random 16+ character secret that cron-job.org sends as X-Backup-Token:
+// define('SMS2_BACKUP_CRON_TOKEN', 'change-me-to-a-long-random-string');
+// Optional: who gets an email when a backup fails (default: Admin alert email).
+// define('SMS2_BACKUP_NOTIFY_EMAIL', 'admin@example.com');
+
 define('SMS2_LOCAL_BASE_URL', '/sms2_system');
 
 // --- Main database (env-equivalent: DB_HOST, DB_DATABASE, …) ---

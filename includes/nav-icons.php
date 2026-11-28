@@ -11,6 +11,7 @@ if (!function_exists('smsNavPageIcon')) {
             'module-security' => 'fa-lock',
             'activity-logs' => 'fa-history',
             'system-settings' => 'fa-sliders-h',
+            'data-backup' => 'fa-cloud-upload-alt',
             'security-settings' => 'fa-shield-alt',
             'announcements' => 'fa-bullhorn',
             'online-pre-registration' => 'fa-globe',

@@ -77,6 +77,7 @@ if (!function_exists('sms2_detect_base_url')) {
         $markers = [
             '/account/',
             '/api/',
+            '/backup/',
             '/communication/',
             '/dashboard/',
             '/database/',
@@ -747,6 +748,7 @@ $MODULES = [
             ],
             'Settings' => [
                 'system-settings',
+                'data-backup',
             ],
         ],
         'pages' => [
@@ -755,6 +757,7 @@ $MODULES = [
             ['slug' => 'module-security',  'title' => 'Module Security'],
             ['slug' => 'activity-logs',    'title' => 'Activity Logs'],
             ['slug' => 'system-settings',  'title' => 'System Settings'],
+            ['slug' => 'data-backup',      'title' => 'Data Backup'],
         ],
     ],
 ];

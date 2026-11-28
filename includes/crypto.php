@@ -189,7 +189,7 @@ function smsSecretDecrypt(string $stored): string
 /** Setting keys stored encrypted at rest. */
 function smsEncryptedSettingKeys(): array
 {
-    return ['smtp_password', 'turnstile_secret_key'];
+    return ['smtp_password', 'turnstile_secret_key', 'gdrive_refresh_token'];
 }
 
 function smsIsEncryptedSettingKey(string $key): bool
