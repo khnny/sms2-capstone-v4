@@ -29,6 +29,10 @@
 // Auto-detect BASE_URL when the app is at the web root.
 // define('BASE_URL', '');
 
+// Standalone Student Portal: students who open a CRAD research page are sent there.
+// (Or set the STUDENT_PORTAL_URL environment variable.)
+// define('STUDENT_PORTAL_URL', 'https://student.your-domain.com');
+
 define('DB_CONNECTION', 'mysql');
 define('DB_HOST', 'YOUR_HOSTFORGE_INTERNAL_HOST');
 define('DB_PORT', '3306');

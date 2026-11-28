@@ -214,6 +214,8 @@ function requireAuth(): void
     smsEnforceSystemMaintenance();
     smsEnforceModuleForceLogout();
     smsEnforcePrimaryModuleMaintenance();
+    require_once __DIR__ . '/student-portal-redirect.php';
+    smsRedirectStudentToPortal();
 }
 
 function getCurrentUserName(): string
