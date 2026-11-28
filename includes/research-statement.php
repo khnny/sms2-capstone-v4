@@ -366,7 +366,7 @@ function smsResearchStatement(PDO $crad, array $user): array
     if ($s5['state'] === 'locked') {
         $s7 = ['state' => 'locked', 'status' => 'Locked'];
     } elseif ($panelReq && smsStmtBad($panelReq['status'])) {
-        $s7 = ['state' => 'attention', 'status' => 'Panel application ' . strtolower((string) $panelReq['status'])];
+        $s7 = ['state' => 'attention', 'status' => 'Defense application ' . strtolower((string) $panelReq['status'])];
     } elseif ($defFailed) {
         $s7 = ['state' => 'attention', 'status' => 'Defense failed'];
     } elseif ($defenses && $defDone === count($defenses) && $defDone > 0) {
@@ -374,16 +374,16 @@ function smsResearchStatement(PDO $crad, array $user): array
     } elseif ($defenses) {
         $s7 = ['state' => 'waiting', 'status' => 'Defense scheduled'];
     } elseif ($panelReq) {
-        $s7 = ['state' => 'waiting', 'status' => 'Panel application ' . strtolower((string) $panelReq['status'])];
+        $s7 = ['state' => 'waiting', 'status' => 'Defense application ' . strtolower((string) $panelReq['status'])];
     } else {
         $s7 = ['state' => $s5['state'] === 'done' ? 'current' : 'locked', 'status' => $s5['state'] === 'done' ? 'Not applied' : 'Locked'];
     }
     $steps[] = $s7 + [
         'key' => 'defense',
-        'title' => 'Panel application and defense',
-        'summary' => $defenses ? count($defenses) . ' defense schedule(s)' : 'Apply for a panel once your chapters are approved.',
+        'title' => 'Defense application and schedule',
+        'summary' => $defenses ? count($defenses) . ' defense schedule(s)' : 'Apply for your defense once your chapters are approved.',
         'rows' => array_filter([
-            'Panel application' => $panelReq ? ((string) $panelReq['application_ref'] . ' · ' . $panelReq['status']) : '',
+            'Defense application' => $panelReq ? ((string) $panelReq['application_ref'] . ' · ' . $panelReq['status']) : '',
             'Applied on' => smsStmtDate($panelReq['submitted_at'] ?? null, true),
             'Reviewed on' => smsStmtDate($panelReq['reviewed_at'] ?? null, true),
         ], static fn($v) => $v !== ''),
@@ -398,7 +398,7 @@ function smsResearchStatement(PDO $crad, array $user): array
         'remarks' => !empty($panelReq['review_remarks'])
             ? [['from' => 'CRAD', 'text' => (string) $panelReq['review_remarks'], 'at' => smsStmtDate($panelReq['reviewed_at'] ?? null)]]
             : [],
-        'action' => ['label' => 'Open panel application', 'path' => '/modules/student-portal/pages/panel-application.php'],
+        'action' => ['label' => 'Open defense application', 'path' => '/modules/student-portal/pages/panel-application.php'],
         'updated_at' => (string) ($panelReq['reviewed_at'] ?? $panelReq['submitted_at'] ?? ''),
     ];
 

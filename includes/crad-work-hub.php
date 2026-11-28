@@ -207,7 +207,7 @@ function cwhCradOfficerData(PDO $pdo): array
 
     $rows = cwhRows($pdo, "SELECT id, application_ref, group_number, research_title, submitted_at, status FROM `crad_defense_panel_requests`
         WHERE status IN ('Submitted', 'Under Review') ORDER BY submitted_at, id");
-    $q[] = ['key' => 'panel', 'title' => 'Panel applications', 'icon' => 'ti-users', 'color' => '#8b5cf6', 'verb' => 'Review',
+    $q[] = ['key' => 'panel', 'title' => 'Defense applications', 'icon' => 'ti-users', 'color' => '#8b5cf6', 'verb' => 'Review',
         'all' => $base . 'panel-applications.php', 'count' => count($rows),
         'items' => array_map(static fn($r) => ['title' => $r['group_number'] . ' · ' . $r['research_title'], 'sub' => $r['application_ref'] . ' · ' . $r['status'], 'who' => (string) $r['group_number'], 'age' => cwhAgeDays($r['submitted_at']), 'url' => $base . 'panel-applications.php?id=' . (int) $r['id']], $rows)];
 
@@ -216,7 +216,7 @@ function cwhCradOfficerData(PDO $pdo): array
         ORDER BY p.reviewed_at, p.id");
     $q[] = ['key' => 'schedule', 'title' => 'Ready to schedule', 'icon' => 'ti-calendar-event', 'color' => '#3b82f6', 'verb' => 'Schedule',
         'all' => $base . 'panel-configuration.php', 'count' => count($rows),
-        'items' => array_map(static fn($r) => ['title' => $r['group_number'] . ' · ' . $r['research_title'], 'sub' => 'Panel application approved', 'who' => (string) $r['group_number'], 'age' => cwhAgeDays($r['reviewed_at']), 'url' => $base . 'panel-configuration.php'], $rows)];
+        'items' => array_map(static fn($r) => ['title' => $r['group_number'] . ' · ' . $r['research_title'], 'sub' => 'Defense application approved', 'who' => (string) $r['group_number'], 'age' => cwhAgeDays($r['reviewed_at']), 'url' => $base . 'panel-configuration.php'], $rows)];
 
     $rows = cwhRows($pdo, "SELECT t.id, t.proposal_number, t.proposed_title, t.department, t.crad_reviewed_at FROM `crad_title_approvals` t
         WHERE t.status = 'Approved' AND t.coordinator_status = 'Approved' AND t.crad_status = 'Approved'

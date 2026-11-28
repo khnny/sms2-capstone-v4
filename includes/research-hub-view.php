@@ -32,7 +32,7 @@ function smsHubTitle(array $step): string
         'registry' => 'Group number',
         'chapters' => 'Chapters 1 to 3',
         'progress' => 'Progress updates',
-        'defense' => 'Panel & defense',
+        'defense' => 'Defense application',
         'manuscript' => 'Final manuscript',
         'clearance' => 'Payment & clearance',
     ][$step['key']] ?? (string) $step['title'];

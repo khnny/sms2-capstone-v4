@@ -14,7 +14,7 @@ if (!smsRoleAllowedForModule(['crad_officer'], 'crad')) {
     exit('Forbidden');
 }
 
-$pageTitle = 'Panel Applications';
+$pageTitle = 'Defense Applications';
 $activeModule = 'crad';
 $activePage = 'panel-applications';
 $pdo = cradDb();
@@ -64,11 +64,11 @@ if ($pdo instanceof PDO) {
 }
 $documents = $selected ? cradPanelAppDocuments($pdo, (int) $selected['id']) : [];
 $history = $selected ? cradPanelAppHistory($pdo, (int) $selected['id']) : [];
-$breadcrumbs = [['label' => 'CRAD', 'href' => BASE_URL . '/modules/crad/pages/research-defense-scheduling.php'], ['label' => 'Panel Applications']];
+$breadcrumbs = [['label' => 'CRAD', 'href' => BASE_URL . '/modules/crad/pages/research-defense-scheduling.php'], ['label' => 'Defense Applications']];
 require_once ROOT_PATH . '/includes/layout-start.php';
 ?>
 <?php renderBreadcrumbs($breadcrumbs); ?>
-<h1 class="h4 mb-3">Panel Applications</h1>
+<h1 class="h4 mb-3">Defense Applications</h1>
 <?php if ($notice): ?><div class="alert alert-success"><?= e($notice) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= e($error) ?></div><?php endif; ?>
 
@@ -87,7 +87,7 @@ require_once ROOT_PATH . '/includes/layout-start.php';
                     <td><a href="?id=<?= (int) $row['id'] ?>">Review</a></td>
                 </tr>
             <?php endforeach; ?>
-            <?php if (!$list): ?><tr><td colspan="6" class="text-muted">No submitted panel applications yet.</td></tr><?php endif; ?>
+            <?php if (!$list): ?><tr><td colspan="6" class="text-muted">No submitted defense applications yet.</td></tr><?php endif; ?>
             </tbody>
         </table>
     </div>

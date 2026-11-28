@@ -68,7 +68,7 @@ $sdActions = [
     ['Research group', 'users', 'research-group.php'],
     ['Submit chapters', 'file-upload', 'submit-chapters.php'],
     ['Progress updates', 'chart-line', 'progress-updates.php'],
-    ['Panel application', 'users-group', 'panel-application.php'],
+    ['Defense application', 'users-group', 'panel-application.php'],
     ['Final manuscript', 'book', 'final-manuscript.php'],
     ['Upload college payment', 'receipt', 'college-payment.php'],
     ['Research clearance', 'clipboard-check', 'research-clearance.php'],

@@ -179,7 +179,7 @@ function cradPanelAppSaveDetails(PDO $pdo, int $appId, array $input): array
         return ['ok' => false, 'error' => 'List at least one group member, one name per line.'];
     }
     if (count($members) > CRAD_PANEL_APP_MAX_MEMBERS) {
-        return ['ok' => false, 'error' => 'A panel application can list up to ' . CRAD_PANEL_APP_MAX_MEMBERS . ' members.'];
+        return ['ok' => false, 'error' => 'A defense application can list up to ' . CRAD_PANEL_APP_MAX_MEMBERS . ' members.'];
     }
     $pdo->prepare(
         "UPDATE `" . CRAD_PANEL_APP_TABLE . "` SET research_title = ?, adviser_name = ?, members_text = ?, updated_at = NOW() WHERE id = ?"
