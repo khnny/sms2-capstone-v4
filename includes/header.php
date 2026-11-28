@@ -97,7 +97,7 @@ if ($isCradPage && strpos(' ' . $bodyClass . ' ', ' crad-app ') === false) {
     <link href="<?= BASE_URL ?>/assets/css/welcome.css?v=8" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/auth-transition.css?v=8" rel="stylesheet">
     <?php endif; ?>
-    <link href="<?= BASE_URL ?>/assets/css/theme.css?v=14" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/theme.css?v=15" rel="stylesheet">
     <?php if ($isCradPage): ?>
     <link href="<?= BASE_URL ?>/modules/crad/assets/css/crad-ui.css?v=12" rel="stylesheet">
     <?php endif; ?>

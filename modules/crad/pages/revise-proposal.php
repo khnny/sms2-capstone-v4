@@ -66,7 +66,7 @@ require_once ROOT_PATH . '/includes/layout-start.php';
 renderBreadcrumbs($breadcrumbs);
 ?>
 <link href="<?= BASE_URL ?>/assets/css/module-process-list.css?v=2" rel="stylesheet">
-<link href="<?= BASE_URL ?>/assets/css/grant-reviewer-evaluation.css?v=2" rel="stylesheet">
+<link href="<?= BASE_URL ?>/assets/css/grant-reviewer-evaluation.css?v=3" rel="stylesheet">
 
 <?php if ($dbError !== '' || !$application): ?>
 <div class="mpl-alert" role="alert" style="background:rgba(239,68,68,.08);color:#b91c1c;margin-bottom:1rem;">

@@ -376,3 +376,12 @@
 .gaw-monitor-score-pill strong {
     color: #0f172a;
 }
+
+/* Dark mode — remap the light-only literals above onto SMS tokens */
+[data-theme="dark"] .gre-stat.pending strong { color: #fde68a; }
+[data-theme="dark"] .gre-stat.scored strong { color: #6ee7b7; }
+[data-theme="dark"] .gre-proposal-toggle { background: var(--sms-surface); border-color: var(--sms-border); }
+[data-theme="dark"] .gre-scored-banner { color: #6ee7b7; }
+[data-theme="dark"] .gre-adviser-banner { color: #fdba74; }
+[data-theme="dark"] .gaw-monitor-score-pill { background: var(--sms-surface-muted); border-color: var(--sms-border); color: var(--sms-text-muted); }
+[data-theme="dark"] .gaw-monitor-score-pill strong { color: var(--sms-heading); }

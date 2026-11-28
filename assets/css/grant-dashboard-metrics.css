@@ -126,3 +126,20 @@
     .gdm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .gdm-card strong { font-size: 1.1rem; }
 }
+
+/* Dark mode — remap the light-only literals above onto SMS tokens */
+[data-theme="dark"] .gdm-head h2,
+[data-theme="dark"] .gdm-card strong { color: var(--sms-heading); }
+[data-theme="dark"] .gdm-head p,
+[data-theme="dark"] .gdm-updated,
+[data-theme="dark"] .gdm-card span { color: var(--sms-text-muted); }
+[data-theme="dark"] .gdm-live-badge { background: rgba(96, 165, 250, .18); border-color: rgba(96, 165, 250, .35); color: #93c5fd; }
+[data-theme="dark"] .gdm-link { color: var(--sms-primary-light); }
+[data-theme="dark"] .gdm-icon.blue   { color: #93c5fd; background: rgba(96, 165, 250, .16); }
+[data-theme="dark"] .gdm-icon.purple { color: #c4b5fd; background: rgba(167, 139, 250, .16); }
+[data-theme="dark"] .gdm-icon.amber  { color: #fde68a; background: rgba(251, 191, 36, .16); }
+[data-theme="dark"] .gdm-icon.orange { color: #fdba74; background: rgba(251, 146, 60, .16); }
+[data-theme="dark"] .gdm-icon.red    { color: #fca5a5; background: rgba(248, 113, 113, .16); }
+[data-theme="dark"] .gdm-icon.green  { color: #6ee7b7; background: rgba(52, 211, 153, .16); }
+[data-theme="dark"] .gdm-icon.teal   { color: #5eead4; background: rgba(45, 212, 191, .16); }
+[data-theme="dark"] .gdm-icon.indigo { color: #a5b4fc; background: rgba(129, 140, 248, .16); }
