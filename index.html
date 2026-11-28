@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestlink SMS2 Portal</title>
+<meta name="description" content="Bestlink College of the Philippines SMS2: one place to open CRAD, the Student Portal and the other subsystems.">
+<link rel="icon" href="assets/bcp-crest.png">
+<style>
+@font-face{font-family:'Inter';font-weight:400;font-display:swap;src:url('assets/fonts/Inter-Regular.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:500;font-display:swap;src:url('assets/fonts/Inter-Medium.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:600;font-display:swap;src:url('assets/fonts/Inter-SemiBold.woff2') format('woff2')}
+@font-face{font-family:'Inter';font-weight:700;font-display:swap;src:url('assets/fonts/Inter-Bold.woff2') format('woff2')}
+:root{
+  --navy:#0b2a6b;--navy-deep:#071c48;--blue:#1a6fc4;--indigo:#3b3fd8;
+  --ink:#0f172a;--text:#1e293b;--muted:#64748b;--line:#e2e8f0;--bg:#f4f6fb;
+  --green:#16a34a;--green-soft:#ecfdf3;--blue-c:#2563eb;--blue-soft:#eff4ff;
+  --purple:#9333ea;--purple-soft:#f6efff;--amber:#f59e0b;--amber-soft:#fff8eb;
+  --teal:#0d9488;--teal-soft:#ecfdfa;--rose:#e11d48;--rose-soft:#fff1f3;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:'Inter','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+
+/* Top bar */
+.topbar{position:sticky;top:0;z-index:10;height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 1.5rem;background:var(--navy-deep);color:#fff;box-shadow:0 2px 10px rgba(7,28,72,.25)}
+.brand{display:flex;align-items:center;gap:.65rem;font-weight:700;font-size:1.05rem;color:#fff;text-decoration:none}
+.brand img{width:36px;height:36px;object-fit:contain}
+.clock{font-variant-numeric:tabular-nums;font-size:.9rem;color:#cbd5e1;font-weight:500}
+
+main{width:100%;max-width:1220px;margin:0 auto;padding:1.75rem 1.5rem 3rem;flex:1}
+
+/* Hero */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:2.25rem 2.25rem 2rem;color:#fff;
+  background:radial-gradient(120% 140% at 0% 0%,#132f86 0%,#1a2f9c 45%,#3b3fd8 100%);box-shadow:0 18px 40px rgba(26,47,156,.28)}
+.hero::after{content:"";position:absolute;right:-90px;top:-70px;width:430px;height:430px;border-radius:50%;
+  background:url('assets/bcp-crest.png') center/62% no-repeat, radial-gradient(circle,rgba(255,255,255,.10) 0 58%,rgba(255,255,255,.04) 58% 70%,transparent 70%);opacity:.18;pointer-events:none}
+.eyebrow{font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#c7d2fe}
+.hero h1{margin:.45rem 0 .35rem;font-size:clamp(1.7rem,3.6vw,2.35rem);font-weight:700;letter-spacing:-.01em}
+.hero .lead{margin:0;max-width:640px;color:#e0e7ff;font-size:1.02rem;line-height:1.55}
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:1.1rem 0 1.6rem}
+.chip{border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:.32rem .8rem;font-size:.8rem;font-weight:600;background:rgba(255,255,255,.06)}
+.hero-grid{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 1.25fr;gap:.9rem}
+.tile{display:flex;align-items:center;gap:.85rem;padding:1rem 1.1rem;border-radius:16px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(4px)}
+.tile .ic{flex:0 0 44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff}
+.tile small{display:block;font-size:.78rem;color:#c7d2fe;font-weight:500}
+.tile b{display:block;font-size:1.05rem;font-weight:700;margin-top:.1rem}
+.next{background:#fff;color:var(--ink);border-radius:18px;padding:1.15rem 1.3rem;display:flex;flex-direction:column;justify-content:center;box-shadow:0 10px 24px rgba(7,28,72,.18)}
+.next .eyebrow{color:var(--blue-c)}
+.next h2{margin:.3rem 0 .2rem;font-size:1.2rem}
+.next p{margin:0 0 .85rem;color:var(--muted);font-size:.9rem}
+.btn{display:inline-flex;align-items:center;gap:.4rem;align-self:flex-start;border:0;border-radius:10px;padding:.62rem 1rem;font:600 .9rem 'Inter',sans-serif;text-decoration:none;cursor:pointer;transition:transform .12s,box-shadow .12s,background .12s}
+.btn-primary{background:var(--blue-c);color:#fff;box-shadow:0 6px 14px rgba(37,99,235,.3)}
+.btn-primary:hover{background:#1d4ed8;transform:translateY(-1px)}
+.btn-soft{background:var(--blue-soft);color:#1d4ed8}
+.btn-soft:hover{background:#dfe8ff}
+
+/* Section header */
+.sec{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.75rem;margin:2rem 0 .9rem}
+.sec h3{margin:0;font-size:1.15rem;color:var(--ink)}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:1rem}
+.legend{display:flex;gap:.9rem;font-size:.85rem;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:.35rem;vertical-align:-1px;background:var(--c)}
+.search{position:relative}
+.search input{width:240px;max-width:60vw;border:1px solid var(--line);border-radius:10px;padding:.55rem .8rem .55rem 2.1rem;font:500 .88rem 'Inter',sans-serif;background:#fff;color:var(--ink);outline:none}
+.search input:focus{border-color:var(--blue-c);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.search svg{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--muted)}
+
+/* Cards */
+.grid{display:grid;gap:1.1rem;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+.card{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 2px 6px rgba(15,23,42,.04);transition:transform .15s,box-shadow .15s,border-color .15s}
+.card.live:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(11,42,107,.12);border-color:#c7d2fe}
+.card-head{display:flex;align-items:center;gap:.8rem;padding:1rem 1.15rem;background:var(--soft);border-bottom:1px solid var(--line)}
+.card-head .ic{flex:0 0 42px;height:42px;border-radius:12px;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+.card-head .t{flex:1;min-width:0}
+.card-head .k{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.card-head h4{margin:.1rem 0 0;font-size:1.12rem;color:var(--ink)}
+.pill{flex:0 0 auto;font-size:.74rem;font-weight:700;padding:.28rem .65rem;border-radius:999px;background:#fff;color:var(--c);border:1px solid rgba(0,0,0,.04)}
+.card-body{padding:1.1rem 1.15rem .5rem;flex:1}
+.card-body p{margin:0 0 .9rem;line-height:1.55;color:#334155;font-size:.93rem}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:.6rem 1.5rem}
+.meta small{display:block;font-size:.76rem;color:var(--muted)}
+.meta b{display:block;font-size:.88rem;font-weight:600;color:var(--ink);overflow-wrap:anywhere}
+.card-foot{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1.15rem 1.1rem}
+.card-foot .dom{font-size:.8rem;color:var(--muted)}
+.card.soon{opacity:.75}
+.card.soon .card-head .ic{background:#94a3b8}
+.card.soon .k,.card.soon .pill{color:#64748b}
+.empty{display:none;padding:2rem;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--line);border-radius:18px}
+
+.note{margin-top:1.4rem;display:flex;gap:.6rem;align-items:flex-start;color:var(--muted);font-size:.88rem}
+
+footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;padding:1.1rem 1.5rem;font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);background:#fff}
+
+@media (max-width:980px){.hero-grid{grid-template-columns:1fr 1fr}.next{grid-column:1/-1}}
+@media (max-width:560px){
+  .hero{padding:1.6rem 1.25rem;border-radius:20px}.hero-grid{grid-template-columns:1fr}
+  main{padding:1.1rem .9rem 2rem}.hero::after{opacity:.07;width:320px;height:320px;right:-110px;top:-60px}.grid{grid-template-columns:1fr}.clock{display:none}
+  .search input{width:100%;max-width:none}.search,.tools{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/"><img src="assets/bcp-crest.png" alt="">BCP · SMS2</a>
+  <span class="clock" id="clock"></span>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="eyebrow" id="today">SMS2 PORTAL</div>
+    <h1>Welcome to Bestlink SMS2 👋</h1>
+    <p class="lead">One place to open every SMS2 subsystem of Bestlink College of the Philippines. Pick a system below and sign in with your SMS2 account.</p>
+    <div class="chips">
+      <span class="chip">bestlinksms2portal.com</span>
+      <span class="chip">Bestlink College of the Philippines</span>
+      <span class="chip" id="ay">AY 2026-2027</span>
+    </div>
+    <div class="hero-grid">
+      <div class="tile"><span class="ic" style="background:#22c55e"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span><div><small>Live subsystems</small><b id="liveCount">0</b></div></div>
+      <div class="tile"><span class="ic" style="background:#3b82f6"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><div><small>Sign-in</small><b>One SMS2 account</b></div></div>
+      <div class="tile"><span class="ic" style="background:#f59e0b"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span><div><small>Connection</small><b>Secure (HTTPS)</b></div></div>
+      <div class="next">
+        <span class="eyebrow">Start here</span>
+        <h2>Research & CRAD</h2>
+        <p>Staff and faculty open CRAD. Students use the Student Portal.</p>
+        <a class="btn btn-primary" href="https://crad.bestlinksms2portal.com">Open CRAD <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <div class="sec">
+    <h3>SMS2 subsystems</h3>
+    <div class="tools">
+      <div class="legend"><span style="--c:var(--green)">Live</span><span style="--c:#94a3b8">Coming soon</span></div>
+      <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search subsystems…" aria-label="Search subsystems"></label>
+    </div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty">No subsystem matches your search.</div>
+  <noscript><p>Please turn on JavaScript to see the subsystem links.</p></noscript>
+
+  <p class="note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Each subsystem opens in its own address under bestlinksms2portal.com. Bookmark this page to find them all.</p>
+</main>
+
+<footer><span>© <span id="year"></span> Bestlink College of the Philippines. All rights reserved.</span><span>SMS2 Portal</span></footer>
+
+<script src="links.js"></script>
+<script>
+(function () {
+  var ICONS = {
+    research:'<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7 15h10"/>',
+    student:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
+    finance:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+    enrollment:'<path d="M16 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M16 3v4h4M8 13h8M8 17h5"/>',
+    library:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/>',
+    clinic:'<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/><path d="M12 9v5M9.5 11.5h5"/>',
+    guidance:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    hr:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.5c2.3.2 4 1.8 4.5 4.5"/>',
+    admin:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+    grades:'<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
+    folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>'
+  };
+  var COLORS = {
+    green:['var(--green)','var(--green-soft)'], blue:['var(--blue-c)','var(--blue-soft)'],
+    purple:['var(--purple)','var(--purple-soft)'], amber:['var(--amber)','var(--amber-soft)'],
+    teal:['var(--teal)','var(--teal-soft)'], rose:['var(--rose)','var(--rose-soft)']
+  };
+  function svg(name) {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[name] || ICONS.folder) + '</svg>';
+  }
+  function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+  function host(u) { try { return new URL(u).host; } catch (e) { return ''; } }
+
+  var list = window.SUBSYSTEMS || [];
+  var grid = document.getElementById('grid');
+  var live = 0;
+
+  list.forEach(function (s) {
+    var isLive = s.status !== 'soon' && !!s.url;
+    if (isLive) { live++; }
+    var c = COLORS[s.color] || COLORS.blue;
+    var card = document.createElement('article');
+    card.className = 'card ' + (isLive ? 'live' : 'soon');
+    card.style.setProperty('--c', c[0]);
+    card.style.setProperty('--soft', isLive ? c[1] : '#f1f5f9');
+    card.dataset.search = [s.name, s.short, s.description, s.who].join(' ').toLowerCase();
+    card.innerHTML =
+      '<div class="card-head"><span class="ic">' + svg(s.icon) + '</span>' +
+        '<div class="t"><div class="k">' + esc(s.short || 'SMS2') + '</div><h4>' + esc(s.name) + '</h4></div>' +
+        '<span class="pill">' + (isLive ? 'Live' : 'Coming soon') + '</span></div>' +
+      '<div class="card-body"><p>' + esc(s.description) + '</p>' +
+        '<div class="meta"><div><small>For</small><b>' + esc(s.who || 'Everyone') + '</b></div>' +
+        '<div><small>Address</small><b>' + esc(host(s.url) || 'Not live yet') + '</b></div></div></div>' +
+      '<div class="card-foot"><span class="dom"></span>' +
+        (isLive ? '<a class="btn btn-soft" href="' + esc(s.url) + '">Open ' + esc(s.name) + ' <span aria-hidden="true">→</span></a>'
+                : '<span class="btn btn-soft" style="cursor:default;opacity:.7">Coming soon</span>') +
+      '</div>';
+    grid.appendChild(card);
+  });
+
+  document.getElementById('liveCount').textContent = live + ' of ' + list.length;
+
+  var q = document.getElementById('q'), empty = document.getElementById('empty');
+  q.addEventListener('input', function () {
+    var term = q.value.trim().toLowerCase(), shown = 0;
+    Array.prototype.forEach.call(grid.children, function (el) {
+      var ok = !term || el.dataset.search.indexOf(term) !== -1;
+      el.style.display = ok ? '' : 'none';
+      if (ok) { shown++; }
+    });
+    empty.style.display = shown ? 'none' : 'block';
+  });
+
+  var now = new Date();
+  var opts = { timeZone: 'Asia/Manila' };
+  document.getElementById('today').textContent =
+    now.toLocaleDateString('en-US', Object.assign({ weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }, opts)).toUpperCase() + ' · SMS2 PORTAL';
+  var y = Number(now.toLocaleDateString('en-US', Object.assign({ year: 'numeric' }, opts)));
+  var m = Number(now.toLocaleDateString('en-US', Object.assign({ month: 'numeric' }, opts)));
+  var start = m >= 8 ? y : y - 1;
+  document.getElementById('ay').textContent = 'AY ' + start + '-' + (start + 1);
+  document.getElementById('year').textContent = y;
+  function tick() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', opts); }
+  tick(); setInterval(tick, 1000);
+})();
+</script>
+</body>
+</html>
