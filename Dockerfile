@@ -4,10 +4,11 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libcurl4-openssl-dev \
         libonig-dev \
+        libzip-dev \
         poppler-utils \
         tesseract-ocr \
         tesseract-ocr-eng \
-    && docker-php-ext-install curl mbstring mysqli pdo pdo_mysql \
+    && docker-php-ext-install curl mbstring mysqli pdo pdo_mysql zip \
     && a2enmod headers rewrite \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,7 +23,7 @@ COPY . /var/www/html/
 
 RUN rm -rf /var/www/html/.git /var/www/html/.cursor \
     && find /var/www/html -type f \( -name '*.bak' -o -name '*.preprefix.bak' \) -delete \
-    && mkdir -p /var/www/html/storage/uploads /var/www/html/storage/keys /var/www/html/storage/logs \
+    && mkdir -p /var/www/html/storage/uploads /var/www/html/storage/keys /var/www/html/storage/logs /var/www/html/storage/backups \
     && chown -R www-data:www-data /var/www/html/storage \
     && chmod 0750 /var/www/html/storage /var/www/html/storage/uploads /var/www/html/storage/keys /var/www/html/storage/logs
 

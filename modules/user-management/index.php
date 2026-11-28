@@ -189,6 +189,12 @@ $subpages = [
         'icon'  => 'adjustments-horizontal',
         'desc'  => 'Configure application name, school year, session rules, and global toggles.',
     ],
+    [
+        'slug'  => 'data-backup',
+        'title' => 'Data Backup',
+        'icon'  => 'cloud-upload-alt',
+        'desc'  => 'Automatic Google Drive backups of the database and uploaded files, with download and restore.',
+    ],
 ];
 ?>
 

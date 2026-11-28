@@ -9,6 +9,8 @@
  *   SMS2_APP_KEY (required to preserve existing encrypted DB secrets)
  *   SMS2_SMTP_PASSWORD / SMS2_SMTP_USERNAME  (Gmail App Password — survives redeploys)
  *   SMS2_TURNSTILE_SITE_KEY / SMS2_TURNSTILE_SECRET_KEY (recommended for live CAPTCHA)
+ *   SMS2_GDRIVE_CLIENT_ID / SMS2_GDRIVE_CLIENT_SECRET / SMS2_BACKUP_CRON_TOKEN
+ *     (Google Drive data backup — see docs/DATA-BACKUP.md)
  *
  * Full checklist: database/HOSTFORGE_DEPLOY.txt
  *
