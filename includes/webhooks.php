@@ -205,6 +205,37 @@ function smsWebhookWatchers(): array
                 ], $subjects];
             },
         ],
+        'research_group' => [
+            'sql' => 'SELECT id, group_number, leader_id, flow_status FROM `crad_research_groups`',
+            'fields' => ['flow_status'],
+            'event' => static function (array $row, ?array $prev, PDO $crad): ?array {
+                $status = strtolower((string) $row['flow_status']);
+                if (!in_array($status, ['approved', 'rejected', 'ready_for_assignment'], true)) {
+                    return null;
+                }
+                $subjects = smsWebhookGroupSubjects($crad, (int) $row['id']);
+                return ['research.group_status_changed', [
+                    'group_id' => (int) $row['id'],
+                    'group_number' => $row['group_number'],
+                    'status' => ucwords(str_replace('_', ' ', $status)),
+                    'previous_status' => $prev['flow_status'] ?? null,
+                ], $subjects];
+            },
+        ],
+        'panel_application' => [
+            'sql' => 'SELECT id, research_group_id, application_ref, status FROM `crad_defense_panel_requests`',
+            'fields' => ['status'],
+            'event' => static function (array $row, ?array $prev, PDO $crad): ?array {
+                if (in_array((string) $row['status'], ['Draft', 'Submitted'], true)) {
+                    return null;
+                }
+                return ['research.panel_application_status_changed', [
+                    'application_ref' => $row['application_ref'],
+                    'status' => $row['status'],
+                    'previous_status' => $prev['status'] ?? null,
+                ], smsWebhookGroupSubjects($crad, (int) $row['research_group_id'] ?: null)];
+            },
+        ],
         'chapter_submission' => [
             'sql' => 'SELECT id, research_group_id, chapter_number, version_number, status FROM `crad_chapter_submissions`',
             'fields' => ['status'],
