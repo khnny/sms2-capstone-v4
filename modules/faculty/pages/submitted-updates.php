@@ -761,11 +761,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!resp.ok || !result.success || !result.analysis) {
                     // Keep Request Revision available so adviser can send the student back to revise.
                     if (card) {
-                        const revisionBtn = card.querySelector('[data-decision-btn="revision"]');
-                        if (revisionBtn) revisionBtn.disabled = false;
+                        // Analysis is advisory only. When it cannot run (scanned file, image,
+                        // or the AI service is down) the adviser reviews the file manually,
+                        // so every decision stays available instead of blocking Approve.
+                        card.querySelectorAll('[data-decision-btn]').forEach(function (decisionBtn) {
+                            decisionBtn.disabled = false;
+                        });
                         const gate = card.querySelector('[data-ai-gate-note]');
                         if (gate) {
-                            gate.innerHTML = '<?= smsIcon('info-circle') ?>The file could not be analyzed. You can still <strong>Request Revision</strong> so the student can upload a readable, text-based PDF or DOCX. Existing review controls remain subject to the current workflow.';
+                            gate.innerHTML = '<?= smsIcon('info-circle') ?>The file could not be analyzed automatically. Open the attached file and review it yourself, then <strong>Approve</strong> or <strong>Request Revision</strong>.';
                         }
                         const updateIdForModal = this.getAttribute('data-update-id');
                         const revisionTextarea = document.querySelector('#revisionModal' + updateIdForModal + ' textarea[name="feedback_text"]');
@@ -781,10 +785,11 @@ document.addEventListener('DOMContentLoaded', function () {
             } catch (err) {
                 console.error(err);
                 if (card) {
-                    const revisionBtn = card.querySelector('[data-decision-btn="revision"]');
-                    if (revisionBtn) revisionBtn.disabled = false;
+                    card.querySelectorAll('[data-decision-btn]').forEach(function (decisionBtn) {
+                        decisionBtn.disabled = false;
+                    });
                 }
-                if (status) status.textContent = 'The analysis service could not be reached. You can still review the attached file or request revision.';
+                if (status) status.textContent = 'The analysis service could not be reached. Review the attached file yourself, then approve or request revision.';
             } finally {
                 if (progress) progress.hidden = true;
                 if (card) card.removeAttribute('aria-busy');

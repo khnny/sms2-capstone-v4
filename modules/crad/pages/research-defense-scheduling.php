@@ -205,7 +205,7 @@ function cradDefenseSelectedAssignment(PDO $pdo, string $groupNumber, string $pr
                 ) AS adviser,
                 '' AS panel_members
              FROM `crad_research_groups` g
-             JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+             LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
              WHERE (:group_gate <> '' AND g.group_number = :group_match)
                 OR (
                     :proposal_gate <> ''

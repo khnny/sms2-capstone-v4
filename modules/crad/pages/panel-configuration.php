@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             COALESCE(NULLIF(g.group_name, ''), g.group_number, 'Research Group') AS research_group,
                             COALESCE(NULLIF(g.research_title, ''), p.research_title, '') AS research_title
                        FROM `crad_research_groups` g
-                       JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+                       LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
                       WHERE g.id = ? LIMIT 1 FOR UPDATE"
                 );
                 $groupStmt->execute([$selectedGroupId]);
@@ -252,7 +252,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 AND (aa.research_group_id = g.id OR aa.group_number = g.group_number OR aa.proposal_id = g.proposal_id)
                               ORDER BY aa.assigned_at DESC, aa.updated_at DESC, aa.id DESC LIMIT 1) AS adviser_name
                        FROM `crad_research_groups` g
-                       JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+                       LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
                       WHERE g.id = ? LIMIT 1 FOR UPDATE"
                 );
                 $groupStmt->execute([$selectedGroupId]);
@@ -401,8 +401,11 @@ $groups = $pdo->query(
             COALESCE(NULLIF(g.group_name, ''), g.group_number, 'Research Group') AS research_group,
             COALESCE(NULLIF(g.research_title, ''), p.research_title, '') AS research_title
        FROM `crad_research_groups` g
-       JOIN `crad_research_proposals` p ON p.id = g.proposal_id
+       LEFT JOIN `crad_research_proposals` p ON p.id = g.proposal_id
       WHERE LOWER(g.status) NOT IN ('rejected', 'cancelled')
+        -- Only official groups: STU- rows are the student's pre-approval placeholder.
+        AND COALESCE(g.group_number, '') <> ''
+        AND g.group_number NOT LIKE 'STU-%'
       ORDER BY g.group_number, g.id DESC"
 )->fetchAll(PDO::FETCH_ASSOC) ?: [];
 $panelists = $pdo->query(

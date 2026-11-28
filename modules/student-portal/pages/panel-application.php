@@ -27,7 +27,19 @@ $error = null;
 
 if ($pdo instanceof PDO && $studentId !== '') {
     cradPanelAppEnsureSchema($pdo);
-    $group = cradRgFlowGetStudentGroup($pdo, $studentId);
+    // Panel defense is for the official (registered) group, not the student's
+    // STU- placeholder from the Research Group step, so prefer the registry row.
+    try {
+        require_once ROOT_PATH . '/modules/crad/includes/chapter-evaluation-workflow.php';
+        $group = chapterRegisteredStudentGroup($pdo);
+        if ($group && empty($group['adviser']) && !empty($group['adviser_name'])) {
+            $group['adviser'] = $group['adviser_name'];
+        }
+    } catch (Throwable $e) {
+        error_log('Panel application registered-group lookup failed: ' . $e->getMessage());
+        $group = null;
+    }
+    $group = $group ?: cradRgFlowGetStudentGroup($pdo, $studentId);
 }
 if ($group) {
     $app = cradPanelAppDraftForGroup($pdo, $group, (int) getCurrentUserId(), (string) getCurrentUserName());
@@ -64,7 +76,7 @@ foreach ($documents as $d) {
     $docByType[$d['doc_type']] = $d;
 }
 $history = $app ? cradPanelAppHistory($pdo, (int) $app['id']) : [];
-$breadcrumbs = [['label' => 'Dashboard', 'href' => BASE_URL . '/dashboard/index.php'], ['label' => 'Panel Application']];
+$breadcrumbs = [['label' => 'Student Portal', 'url' => BASE_URL . '/modules/student-portal/pages/dashboard.php'], ['label' => 'Panel Application', 'url' => null]];
 require_once ROOT_PATH . '/includes/layout-start.php';
 ?>
 <?php renderBreadcrumbs($breadcrumbs); ?>

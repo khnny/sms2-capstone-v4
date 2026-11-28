@@ -202,8 +202,46 @@ function rpZipInnerFileManual(string $zipPath, string $innerName): ?string
     return null;
 }
 
+/** Text from pdftotext (poppler-utils) when the server has it; '' otherwise. */
+function rpExtractPdfTextWithPoppler(string $filePath): string
+{
+    if (!function_exists('proc_open') || !is_file($filePath)) {
+        return '';
+    }
+    $bin = '';
+    foreach (['/usr/bin/pdftotext', '/usr/local/bin/pdftotext'] as $candidate) {
+        if (is_executable($candidate)) {
+            $bin = $candidate;
+            break;
+        }
+    }
+    if ($bin === '') {
+        return '';
+    }
+    $proc = @proc_open(
+        [$bin, '-q', '-enc', 'UTF-8', '-l', '60', $filePath, '-'],
+        [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
+        $pipes
+    );
+    if (!is_resource($proc)) {
+        return '';
+    }
+    $text = (string) stream_get_contents($pipes[1]);
+    fclose($pipes[1]);
+    fclose($pipes[2]);
+    proc_close($proc);
+
+    return trim($text);
+}
+
 function rpExtractPdfText(string $filePath): string
 {
+    // Word/Google Docs PDFs keep text in compressed, font-encoded streams that the
+    // simple scan below cannot read; pdftotext handles those properly.
+    $popplerText = rpExtractPdfTextWithPoppler($filePath);
+    if ($popplerText !== '') {
+        return $popplerText;
+    }
     $raw = (string) file_get_contents($filePath);
     if ($raw === '') {
         return '';

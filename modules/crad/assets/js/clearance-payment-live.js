@@ -102,8 +102,8 @@
         var canUpload = !!(row && row.can_upload && !locked);
         if (statusEl) {
             statusEl.textContent = row
-                ? ((row.stage_label || 'Research') + ' — ' + (row.status_label || row.status || 'No collage payment uploaded yet'))
-                : 'No collage payment uploaded yet';
+                ? ((row.stage_label || 'Research') + ' — ' + (row.status_label || row.status || 'No college payment uploaded yet'))
+                : 'No college payment uploaded yet';
         }
         if (fileNameEl) fileNameEl.textContent = row && row.uploaded_original ? row.uploaded_original : '';
         if (uploadLabel) uploadLabel.textContent = row && row.has_upload ? 'Re-upload' : 'Upload';
@@ -135,7 +135,7 @@
                 gateEl.hidden = false;
                 gateEl.classList.remove('d-none');
                 gateEl.textContent = 'Upload the ' + ((row && row.stage_label) || 'Research') +
-                    ' collage payment picture. After Admin approves it, that O.R. number and remarks appear on the matching clearance form.';
+                    ' college payment picture. After Admin approves it, that O.R. number and remarks appear on the matching clearance form.';
             }
         }
         if (lockedEl) {
@@ -156,7 +156,7 @@
         if (preview) {
             if (!locked && row && row.uploaded_url) {
                 preview.hidden = false;
-                preview.innerHTML = '<img class="rsc-upload-img" alt="Collage payment" src="' + row.uploaded_url + '">';
+                preview.innerHTML = '<img class="rsc-upload-img" alt="College payment" src="' + row.uploaded_url + '">';
             } else {
                 preview.hidden = true;
                 preview.innerHTML = '';
@@ -215,7 +215,7 @@
         }
         if (preview) {
             preview.innerHTML = row.uploaded_url
-                ? '<img class="rsc-upload-img" alt="Collage payment" src="' + row.uploaded_url + '">'
+                ? '<img class="rsc-upload-img" alt="College payment" src="' + row.uploaded_url + '">'
                 : '';
         }
         if (approveBtn) approveBtn.disabled = row.status === 'approved';
@@ -336,11 +336,11 @@
                 return;
             }
             if (!(current && current.can_upload)) {
-                alert('This collage payment stage is locked.');
+                alert('This college payment stage is locked.');
                 return;
             }
             if (!fileInput.files || !fileInput.files[0]) {
-                alert('Choose the collage payment PNG or JPG first.');
+                alert('Choose the college payment PNG or JPG first.');
                 return;
             }
             uploading = true;

@@ -878,7 +878,7 @@ function getVisibleModules(array $modules): array
                 ['slug' => 'research-proposal-submission', 'title' => 'Research Proposal'],
                 ['slug' => 'panel-application', 'title' => 'Panel Application'],
                 ['slug' => 'submit-chapters', 'title' => 'Submit Chapter 1-3'],
-                ['slug' => 'college-payment', 'title' => 'Upload Collage Payment'],
+                ['slug' => 'college-payment', 'title' => 'Upload College Payment'],
                 ['slug' => 'research-clearance', 'title' => 'Research Services Clearance'],
                 ['slug' => 'my-submissions', 'title' => 'My Submissions'],
                 ['slug' => 'submission-status', 'title' => 'Submission Status'],
@@ -945,6 +945,11 @@ function smsReviewCommitteeGrantModule(): array
 
 function smsPostLoginRedirectUrl(): string
 {
+    // Integrated app sign-in in progress (see login/sso-authorize.php): finish it first.
+    if (!empty($_SESSION['sso_pending']) && is_array($_SESSION['sso_pending'])) {
+        return BASE_URL . '/login/sso-authorize.php';
+    }
+
     require_once __DIR__ . '/navigation-context.php';
 
     return smsRoleHomeUrl(getCurrentUserRoleKey());

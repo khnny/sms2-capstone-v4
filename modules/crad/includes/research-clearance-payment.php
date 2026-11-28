@@ -182,7 +182,7 @@ function rcpMemberStageScoped(PDO $crad): bool
 /**
  * Approved researchers for one research stage (one receipt reference each).
  *
- * Research 1 and Research 2 are separate collage payments, so each stage keeps
+ * Research 1 and Research 2 are separate college payments, so each stage keeps
  * its own references. A stage with no upload yet therefore reports no numbers.
  */
 function rcpGroupPaymentMembers(PDO $crad, int $groupId, string $stage = 'research_1'): array
@@ -589,13 +589,13 @@ function rcpCanUploadStage(PDO $crad, int $groupId, string $stage): array
     if (!function_exists('rscClearanceDoneExists') || !rscClearanceDoneExists($crad, $groupId, 'research_1')) {
         return [
             'ok' => false,
-            'reason' => 'Finish Research 1 clearance (Pre-Oral) before uploading Research 2 collage payment.',
+            'reason' => 'Finish Research 1 clearance (Pre-Oral) before uploading Research 2 college payment.',
         ];
     }
     if (!rcpIsFinalManuscriptApproved($crad, $groupId)) {
         return [
             'ok' => false,
-            'reason' => 'Final Manuscript must be approved before uploading Research 2 collage payment.',
+            'reason' => 'Final Manuscript must be approved before uploading Research 2 college payment.',
         ];
     }
     return ['ok' => true, 'reason' => ''];
@@ -605,7 +605,7 @@ function rcpStoreUpload(int $groupId, array $file): array
 {
     $code = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
     if ($code !== UPLOAD_ERR_OK) {
-        return ['ok' => false, 'error' => 'Choose a PNG or JPG picture of the collage payment.'];
+        return ['ok' => false, 'error' => 'Choose a PNG or JPG picture of the college payment.'];
     }
     $tmp = (string) ($file['tmp_name'] ?? '');
     $name = (string) ($file['name'] ?? 'payment.png');
@@ -615,7 +615,7 @@ function rcpStoreUpload(int $groupId, array $file): array
     $info = @getimagesize($tmp);
     $mime = strtolower((string) ($info['mime'] ?? ''));
     if (!in_array($mime, ['image/png', 'image/jpeg'], true)) {
-        return ['ok' => false, 'error' => 'Upload a PNG or JPG picture of the collage payment.'];
+        return ['ok' => false, 'error' => 'Upload a PNG or JPG picture of the college payment.'];
     }
     $ext = $mime === 'image/png' ? 'png' : 'jpg';
     $data = @file_get_contents($tmp);
@@ -708,7 +708,7 @@ function rcpStudentUpload(PDO $crad, int $groupId, array $file, string $orNumber
         $or = rcpParseReferenceNumber($typed) ?: $typed;
     }
     if ($existing && (string) ($existing['status'] ?? '') === 'approved') {
-        return ['ok' => false, 'error' => rcpStageLabel($stage) . ' collage payment is already approved.'];
+        return ['ok' => false, 'error' => rcpStageLabel($stage) . ' college payment is already approved.'];
     }
     if ($existing) {
         $old = basename(str_replace('\\', '/', (string) ($existing['uploaded_file'] ?? '')));
@@ -794,7 +794,7 @@ function rcpStudentUpload(PDO $crad, int $groupId, array $file, string $orNumber
     if (function_exists('logActivity')) {
         logActivity(
             'create',
-            'Submitted ' . rcpStageLabel($stage) . ' collage payment for research group #' . $groupId,
+            'Submitted ' . rcpStageLabel($stage) . ' college payment for research group #' . $groupId,
             'crad'
         );
     }
@@ -909,7 +909,7 @@ function rcpAdminApprove(PDO $crad, array $payment, string $orNumber, string $re
     if (function_exists('logActivity')) {
         logActivity(
             'update',
-            'Approved ' . rcpStageLabel($stage) . ' collage payment for research group #'
+            'Approved ' . rcpStageLabel($stage) . ' college payment for research group #'
                 . (int) $payment['research_group_id'] . ' (reference ' . $or . ')',
             'crad'
         );
@@ -926,8 +926,8 @@ function rcpAdminApprove(PDO $crad, array $payment, string $orNumber, string $re
                 0,
                 $recipient,
                 'payment_approved',
-                rcpStageLabel($stage) . ' collage payment approved',
-                'Your ' . rcpStageLabel($stage) . ' collage payment was approved. The O.R. number and remarks are now on that Research Services Clearance form.',
+                rcpStageLabel($stage) . ' college payment approved',
+                'Your ' . rcpStageLabel($stage) . ' college payment was approved. The O.R. number and remarks are now on that Research Services Clearance form.',
                 function_exists('rscStudentUrl') ? rscStudentUrl() : '#'
             );
         }
@@ -953,7 +953,7 @@ function rcpAdminReject(PDO $crad, array $payment): array
         logActivity(
             'update',
             'Returned ' . rcpStageLabel((string) ($payment['research_stage'] ?? 'research_1'))
-                . ' collage payment for research group #' . (int) $payment['research_group_id'],
+                . ' college payment for research group #' . (int) $payment['research_group_id'],
             'crad'
         );
     }

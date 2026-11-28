@@ -5,7 +5,7 @@
  * Live figures for the CRAD Officer workspace. Everything is queried from the
  * CRAD research tables so the board reflects the officer's own module:
  * registered research groups, title approvals, adviser/panel assignments,
- * chapter and manuscript submissions, clearances, and collage payments.
+ * chapter and manuscript submissions, clearances, and college payments.
  *
  * No grant-call data and no hardcoded/mock values.
  */

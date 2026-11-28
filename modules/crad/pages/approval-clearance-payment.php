@@ -15,7 +15,7 @@ $pageTitle = 'Approval Clearance Payment';
 $activeModule = 'crad';
 $activePage = 'approval-clearance-payment';
 $pageBannerIcon = 'fa-file-invoice';
-$pageBannerDescription = 'Approve the student collage payment so the O.R. number and remarks appear on the Research Services Clearance form.';
+$pageBannerDescription = 'Approve the student college payment so the O.R. number and remarks appear on the Research Services Clearance form.';
 $breadcrumbs = [
     ['label' => 'Admin', 'url' => BASE_URL . '/modules/crad/index.php'],
     ['label' => 'Approval Clearance Payment', 'url' => null],
@@ -36,7 +36,7 @@ renderBreadcrumbs($breadcrumbs);
      data-rcp-csrf="<?= e(csrfToken()) ?>">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <div class="fw-bold">Collage payment approvals</div>
+            <div class="fw-bold">College payment approvals</div>
             <small class="text-muted" data-rcp-sync></small>
         </div>
     </div>

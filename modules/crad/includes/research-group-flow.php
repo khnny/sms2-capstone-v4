@@ -583,9 +583,13 @@ function cradRgFlowSaveSubmission(
         }
         $key = strtolower($sid !== '' ? $sid : $name);
         if (isset($seenIds[$key])) {
-            continue;
+            // Say which row repeats instead of silently dropping it (the drop made a
+            // full group look incomplete and asked for an incomplete-membership reason).
+            return ['ok' => false, 'message' => $sid !== ''
+                ? 'Member ' . ((int) $idx + 1) . ' has the same Student ID as member ' . $seenIds[$key] . ' (' . $sid . '). Each member needs a different Student ID.'
+                : 'Member ' . ((int) $idx + 1) . ' has the same name as member ' . $seenIds[$key] . '. Add a Student ID or remove the repeated row.'];
         }
-        $seenIds[$key] = true;
+        $seenIds[$key] = (int) $idx + 1;
         $clean[] = [
             'student_id' => $sid,
             'full_name' => $name,

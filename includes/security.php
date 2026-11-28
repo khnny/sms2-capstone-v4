@@ -20,6 +20,20 @@ function smsSendSecurityHeaders(): void
     header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
     header('Cross-Origin-Opener-Policy: same-origin');
 
+    // A portal sign-in in progress (validated by login/sso-authorize.php) ends with a
+    // redirect from the login form to that portal, so its origin must be an allowed
+    // form-action or the browser stops on "Signing in...".
+    $formAction = "'self'";
+    $ssoRedirect = (string) ($_SESSION['sso_pending']['redirect_uri'] ?? '');
+    if ($ssoRedirect !== '') {
+        $parts = parse_url($ssoRedirect);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = (string) ($parts['host'] ?? '');
+        if (in_array($scheme, ['http', 'https'], true) && preg_match('/^[A-Za-z0-9.\-]+$/', $host)) {
+            $formAction .= ' ' . $scheme . '://' . $host . (isset($parts['port']) ? ':' . (int) $parts['port'] : '');
+        }
+    }
+
     // Baseline CSP — local assets + Cloudflare Turnstile CAPTCHA only when used
     header(
         "Content-Security-Policy: default-src 'self'; " .
@@ -32,7 +46,7 @@ function smsSendSecurityHeaders(): void
         "child-src 'self' https://challenges.cloudflare.com https://bcp-admissions.elearningcommons.com; " .
         "frame-ancestors 'self'; " .
         "base-uri 'self'; " .
-        "form-action 'self'"
+        "form-action " . $formAction
     );
 }
 
