@@ -147,9 +147,10 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;paddi
 
 <footer><span>© <span id="year"></span> Bestlink College of the Philippines. All rights reserved.</span><span>SMS2 Portal</span></footer>
 
-<script src="links.js"></script>
 <script>
-(function () {
+/* links.js is loaded with a fresh query string each visit, so new subsystem links show up right away
+   even when the hosting edge caches files. */
+function renderHub() {
   var ICONS = {
     research:'<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7 15h10"/>',
     student:'<path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/>',
@@ -225,6 +226,13 @@ footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:.5rem;paddi
   document.getElementById('year').textContent = y;
   function tick() { document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', opts); }
   tick(); setInterval(tick, 1000);
+}
+(function () {
+  var sc = document.createElement('script');
+  sc.src = 'links.js?t=' + Date.now();
+  sc.onload = renderHub;
+  sc.onerror = renderHub;
+  document.head.appendChild(sc);
 })();
 </script>
 </body>
