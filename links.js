@@ -28,7 +28,7 @@ window.SUBSYSTEMS = [
     name: "Student Portal",
     short: "SMS2 · Students",
     description: "Students sign in with their SMS2 account to follow their research, defenses, clearance, announcements and notifications.",
-    url: "https://student.bestlinksms2portal.com",
+    url: "https://student.bestlinksms2portal.com/login.php?go=1",
     icon: "student",
     color: "blue",
     status: "live",
