@@ -80,8 +80,8 @@ $studentNavGroups = [
     'Research Workspace' => [
         ['slug' => 'research-workspace', 'href' => BASE_URL . '/modules/student-portal/pages/research-workspace.php', 'icon' => 'fa-flask', 'label' => 'Research Workspace', 'locked' => false],
     ],
-    'Panel Application' => [
-        ['slug' => 'panel-application', 'href' => BASE_URL . '/modules/student-portal/pages/panel-application.php', 'icon' => 'fa-clipboard-check', 'label' => 'Panel Application', 'locked' => false],
+    'Defense Application' => [
+        ['slug' => 'panel-application', 'href' => BASE_URL . '/modules/student-portal/pages/panel-application.php', 'icon' => 'fa-clipboard-check', 'label' => 'Defense Application', 'locked' => false],
     ],
     'Core System' => [
         ['slug' => 'grant-opportunities', 'href' => BASE_URL . '/modules/crad/pages/grant-opportunities.php', 'icon' => 'fa-hand-holding-usd', 'label' => 'Grant Opportunities', 'locked' => false],

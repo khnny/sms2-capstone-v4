@@ -876,7 +876,7 @@ function getVisibleModules(array $modules): array
                 ['slug' => 'grades-portal', 'title' => 'Grades Portal'],
                 ['slug' => 'research-group', 'title' => 'Research Group'],
                 ['slug' => 'research-proposal-submission', 'title' => 'Research Proposal'],
-                ['slug' => 'panel-application', 'title' => 'Panel Application'],
+                ['slug' => 'panel-application', 'title' => 'Defense Application'],
                 ['slug' => 'submit-chapters', 'title' => 'Submit Chapter 1-3'],
                 ['slug' => 'college-payment', 'title' => 'Upload College Payment'],
                 ['slug' => 'research-clearance', 'title' => 'Research Services Clearance'],

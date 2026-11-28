@@ -198,7 +198,7 @@ $cradOfficerTabs = [
                 'page' => 'research-defense-scheduling',
             ],
             [
-                'title' => 'Panel Applications',
+                'title' => 'Defense Applications',
                 'description' => 'Review panel defense requests from research groups.',
                 'page' => 'panel-applications',
             ],
